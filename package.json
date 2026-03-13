@@ -1,0 +1,30 @@
+{
+  "name": "fieldlens",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "apps/mobile",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @fieldlens/web",
+    "dev:mobile": "npm run start --workspace @fieldlens/mobile",
+    "build:web": "npm run build --workspace @fieldlens/web",
+    "lint:web": "npm run lint --workspace @fieldlens/web",
+    "typecheck": "npm run typecheck --workspace @fieldlens/web && npm run typecheck --workspace @fieldlens/shared",
+    "typecheck:mobile": "npm run typecheck --workspace @fieldlens/mobile",
+    "run:fieldlens": "powershell -ExecutionPolicy Bypass -File .\\scripts\\run-fieldlens.ps1"
+  },
+  "devDependencies": {
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__template": "^7.4.4",
+    "@types/d3-color": "^3.1.3",
+    "@types/d3-path": "^3.1.1",
+    "@types/istanbul-lib-report": "^3.0.3",
+    "@types/node": "^22.13.14",
+    "@types/prop-types": "^15.7.14",
+    "@types/yargs-parser": "^21.0.3",
+    "typescript": "^5.8.2"
+  }
+}

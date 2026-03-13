@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FieldLens — System Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #060B14 0%, #0A0F1A 50%, #060D18 100%);
+    min-height: 100vh;
+    font-family: 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
+    color: #E2E8F0;
+    padding: 24px;
+  }
+  .header { text-align: center; margin-bottom: 18px; }
+  .header .badge {
+    font-size: 10px; letter-spacing: 6px; color: #FF9900;
+    font-weight: 700; margin-bottom: 6px; text-transform: uppercase;
+  }
+  .header h1 { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .header p { font-size: 11px; color: #475569; }
+  .legend {
+    display: flex; gap: 14px; justify-content: center;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #94A3B8; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .legend-dash svg { display: block; }
+  .diagram-wrap { overflow-x: auto; }
+  svg { display: block; margin: 0 auto; max-width: 100%; }
+  .node { cursor: pointer; transition: opacity 0.2s; }
+  .node:hover .card { filter: url(#softglow); }
+  .edge { transition: opacity 0.25s; }
+  .info-panel {
+    margin: 14px auto 0; max-width: 1100px;
+    background: rgba(15,23,42,0.95);
+    border: 1px solid #1E293B;
+    border-radius: 12px; padding: 14px 20px;
+    min-height: 76px; transition: border-color 0.2s;
+  }
+  .info-default { display: flex; align-items: center; gap: 10px; color: #475569; font-size: 11px; height: 48px; }
+  .info-active { display: none; }
+  .info-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .info-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0; border: 1.5px solid;
+  }
+  .info-name { font-size: 13px; font-weight: 700; }
+  .info-sub { font-size: 10px; color: #64748B; }
+  .info-cols { display: flex; gap: 32px; flex-wrap: wrap; }
+  .info-col-title { font-size: 8px; letter-spacing: 3px; color: #475569; margin-bottom: 6px; font-weight: 700; }
+  .info-row { font-size: 10px; color: #E2E8F0; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .info-row .arrow { font-size: 13px; }
+  .info-row .target { font-weight: 600; }
+  .info-row .lbl { color: #475569; }
+  .clear-btn {
+    margin-left: auto; background: transparent; border: 1px solid #334155;
+    color: #64748B; font-size: 10px; padding: 3px 9px; border-radius: 5px;
+    cursor: pointer; font-family: inherit;
+  }
+  .clear-btn:hover { border-color: #475569; color: #94A3B8; }
+  .happy-path {
+    max-width: 1100px; margin: 10px auto 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 5px; font-size: 9px; color: #475569; flex-wrap: wrap; letter-spacing: 0.5px;
+  }
+  .happy-path span { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="badge">Amazon Nova AI Hackathon 2026</div>
+  <h1>FieldLens — Full System Architecture</h1>
+  <p>Hover or click any component to explore its connections</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#0EA5E9"></div>Mobile (React Native)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>Backend (FastAPI)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>Web (Next.js)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FF9900"></div>Amazon Nova</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#A78BFA"></div>AWS Infrastructure</div>
+  <div class="legend-item legend-dash">
+    <svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#475569" stroke-width="1.5" stroke-dasharray="3,3"/></svg>
+    Async / secondary
+  </div>
+</div>
+
+<div class="diagram-wrap">
+<svg id="arch-svg" viewBox="0 0 1100 740" width="1100" height="740">
+  <defs>
+    <marker id="arr-blue" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="#38BDF8" opacity="0.9"/>
+    </marker>
+    <marker id="arr-green" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="#4ADE80" opacity="0.9"/>
+    </marker>
+    <marker id="arr-orange" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="#FB923C" opacity="0.9"/>
+    </marker>
+    <marker id="arr-nova" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="#FF9900" opacity="0.9"/>
+    </marker>
+    <marker id="arr-purple" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="#A78BFA" opacity="0.9"/>
+    </marker>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Zone: Mobile -->
+  <rect x="8" y="32" width="300" height="322" rx="14" fill="rgba(14,165,233,0.04)" stroke="#0EA5E9" stroke-width="1" stroke-dasharray="5,5" opacity="0.65"/>
+  <text x="22" y="49" font-size="8" fill="#0EA5E9" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">MOBILE LAYER</text>
+
+  <!-- Zone: Backend -->
+  <rect x="358" y="32" width="338" height="350" rx="14" fill="rgba(34,197,94,0.04)" stroke="#22C55E" stroke-width="1" stroke-dasharray="5,5" opacity="0.65"/>
+  <text x="372" y="49" font-size="8" fill="#22C55E" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">BACKEND LAYER — FastAPI on AWS EC2</text>
+
+  <!-- Zone: Web -->
+  <rect x="754" y="32" width="334" height="322" rx="14" fill="rgba(249,115,22,0.04)" stroke="#F97316" stroke-width="1" stroke-dasharray="5,5" opacity="0.65"/>
+  <text x="768" y="49" font-size="8" fill="#F97316" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">WEB LAYER — Next.js / Vercel</text>
+
+  <!-- Zone: Nova -->
+  <rect x="322" y="470" width="442" height="162" rx="14" fill="rgba(255,153,0,0.06)" stroke="#FF9900" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.85"/>
+  <text x="336" y="486" font-size="8" fill="#FF9900" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">AMAZON NOVA — via Amazon Bedrock</text>
+
+  <!-- Zone: Infra Left -->
+  <rect x="8" y="470" width="294" height="224" rx="14" fill="rgba(167,139,250,0.04)" stroke="#A78BFA" stroke-width="1" stroke-dasharray="5,5" opacity="0.55"/>
+  <text x="22" y="486" font-size="8" fill="#A78BFA" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">AWS INFRASTRUCTURE</text>
+
+  <!-- Zone: Infra Right -->
+  <rect x="776" y="470" width="312" height="224" rx="14" fill="rgba(167,139,250,0.04)" stroke="#A78BFA" stroke-width="1" stroke-dasharray="5,5" opacity="0.55"/>
+  <text x="790" y="486" font-size="8" fill="#A78BFA" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.9">AWS INFRASTRUCTURE</text>
+
+  <!-- EDGES GROUP -->
+  <g id="edges-group"></g>
+
+  <!-- NODES GROUP -->
+  <g id="nodes-group"></g>
+
+  <!-- Zone labels bottom -->
+  <g id="zone-labels" opacity="0.3">
+    <text x="158" y="424" font-size="8" fill="#94A3B8" text-anchor="middle" font-family="monospace">↕  HTTPS + WebSocket</text>
+    <text x="921" y="424" font-size="8" fill="#94A3B8" text-anchor="middle" font-family="monospace">↕  HTTPS + SSE</text>
+  </g>
+</svg>
+</div>
+
+<div class="info-panel" id="info-panel">
+  <div class="info-default" id="info-default">
+    <span style="font-size:20px">👆</span>
+    <span>Click or hover any component to see its connections ·
+      <span style="color:#0EA5E9">5 layers</span> ·
+      <span style="color:#22C55E">27 components</span> ·
+      <span style="color:#FF9900">31 connections</span>
+    </span>
+  </div>
+  <div class="info-active" id="info-active">
+    <div class="info-header">
+      <div class="info-icon" id="info-icon"></div>
+      <div>
+        <div class="info-name" id="info-name"></div>
+        <div class="info-sub" id="info-sub"></div>
+      </div>
+      <button class="clear-btn" onclick="clearActive()">✕ clear</button>
+    </div>
+    <div class="info-cols">
+      <div>
+        <div class="info-col-title">SENDS TO</div>
+        <div id="sends-to"></div>
+      </div>
+      <div>
+        <div class="info-col-title">RECEIVES FROM</div>
+        <div id="receives-from"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="happy-path">
+  <span style="color:#64748B;margin-right:4px">HAPPY PATH:</span>
+  <span style="color:#38BDF8">📷 Capture</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#22C55E">⚙️ FastAPI</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#A78BFA">λ Lambda</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#FF9900">⚡ Nova 2 Lite</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#22C55E">📋 JSON Report</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#A78BFA">🛢 RDS + pgvector</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#F97316">📡 SSE Push</span>
+  <span style="color:#334155">→</span>
+  <span style="color:#F97316">🖥 Dashboard</span>
+</div>
+
+<script>
+const nodes = {
+  mobile_app:  { label:"FieldLens Mobile",   sub:"React Native / Expo",       layer:"mobile",  x:120, y:80,  icon:"📱", color:"#0EA5E9", bg:"#0C4A6E" },
+  camera:      { label:"Camera Capture",      sub:"expo-camera",               layer:"mobile",  x:28,  y:200, icon:"📷", color:"#38BDF8", bg:"#075985" },
+  voice:       { label:"Voice Recorder",      sub:"expo-av + Nova Sonic",      layer:"mobile",  x:120, y:200, icon:"🎙", color:"#38BDF8", bg:"#075985" },
+  text:        { label:"Text Notes",          sub:"AsyncStorage",              layer:"mobile",  x:212, y:200, icon:"📝", color:"#38BDF8", bg:"#075985" },
+  offline:     { label:"Offline Sync",        sub:"NetInfo + Queue",           layer:"mobile",  x:28,  y:310, icon:"🔄", color:"#38BDF8", bg:"#075985" },
+  auth_mobile: { label:"Auth (Amplify)",      sub:"Cognito SDK",               layer:"mobile",  x:212, y:310, icon:"🔐", color:"#38BDF8", bg:"#075985" },
+  web_dash:    { label:"Web Dashboard",       sub:"Next.js 14 / Vercel",       layer:"web",     x:868, y:80,  icon:"🖥", color:"#F97316", bg:"#7C2D12" },
+  feed:        { label:"Inspection Feed",     sub:"SSE real-time",             layer:"web",     x:768, y:200, icon:"📡", color:"#FB923C", bg:"#9A3412" },
+  search_ui:   { label:"Semantic Search",     sub:"Natural language",          layer:"web",     x:868, y:200, icon:"🔍", color:"#FB923C", bg:"#9A3412" },
+  analytics:   { label:"Analytics",          sub:"Recharts",                  layer:"web",     x:968, y:200, icon:"📊", color:"#FB923C", bg:"#9A3412" },
+  pdf:         { label:"PDF Export",          sub:"@react-pdf",                layer:"web",     x:768, y:310, icon:"📄", color:"#FB923C", bg:"#9A3412" },
+  map:         { label:"Sites Map",           sub:"React Leaflet",             layer:"web",     x:968, y:310, icon:"🗺", color:"#FB923C", bg:"#9A3412" },
+  api:         { label:"FastAPI Backend",     sub:"Python 3.12 / EC2",         layer:"backend", x:472, y:80,  icon:"⚙️", color:"#22C55E", bg:"#14532D" },
+  ingest:      { label:"Ingest Service",      sub:"Upload + Validate",         layer:"backend", x:372, y:218, icon:"📥", color:"#4ADE80", bg:"#166534" },
+  ai_pipeline: { label:"AI Pipeline",         sub:"Orchestrator",              layer:"backend", x:472, y:218, icon:"🧠", color:"#4ADE80", bg:"#166534" },
+  search_svc:  { label:"Search Service",      sub:"pgvector + Embeddings",     layer:"backend", x:572, y:218, icon:"🔎", color:"#4ADE80", bg:"#166534" },
+  ws_server:   { label:"WebSocket Server",    sub:"Nova Sonic Proxy",          layer:"backend", x:372, y:338, icon:"🔌", color:"#4ADE80", bg:"#166534" },
+  sse_server:  { label:"SSE Server",          sub:"Real-time Events",          layer:"backend", x:572, y:338, icon:"📤", color:"#4ADE80", bg:"#166534" },
+  auth_api:    { label:"Auth Middleware",     sub:"JWT / Cognito JWKS",        layer:"backend", x:472, y:338, icon:"🛡", color:"#4ADE80", bg:"#166534" },
+  nova_lite:   { label:"Nova 2 Lite",         sub:"Multimodal Reasoning",      layer:"nova",    x:338, y:496, icon:"⚡", color:"#FF9900", bg:"#431407" },
+  nova_sonic:  { label:"Nova 2 Sonic",        sub:"Speech-to-Speech",          layer:"nova",    x:472, y:496, icon:"🎵", color:"#FF9900", bg:"#431407" },
+  nova_embed:  { label:"Nova Embeddings",     sub:"Multimodal Vectors",        layer:"nova",    x:606, y:496, icon:"🧬", color:"#FF9900", bg:"#431407" },
+  bedrock:     { label:"Amazon Bedrock",      sub:"Managed AI Gateway",        layer:"nova",    x:472, y:594, icon:"🪨", color:"#FF9900", bg:"#1C0A00" },
+  s3:          { label:"Amazon S3",           sub:"Media Storage",             layer:"infra",   x:22,  y:506, icon:"🗄", color:"#A78BFA", bg:"#2E1065" },
+  rds:         { label:"Amazon RDS",          sub:"PostgreSQL + pgvector",     layer:"infra",   x:152, y:506, icon:"🛢", color:"#A78BFA", bg:"#2E1065" },
+  cognito:     { label:"Amazon Cognito",      sub:"Auth / JWT",                layer:"infra",   x:22,  y:610, icon:"🔑", color:"#A78BFA", bg:"#2E1065" },
+  lambda:      { label:"AWS Lambda",          sub:"S3 Event Trigger",          layer:"infra",   x:152, y:610, icon:"λ",  color:"#A78BFA", bg:"#2E1065" },
+  cloudwatch:  { label:"CloudWatch",          sub:"Logs + Alerts",             layer:"infra",   x:792, y:506, icon:"📈", color:"#A78BFA", bg:"#2E1065" },
+  cloudfront:  { label:"CloudFront",          sub:"CDN / HTTPS",               layer:"infra",   x:924, y:506, icon:"🌐", color:"#A78BFA", bg:"#2E1065" },
+  sns:         { label:"Amazon SNS",          sub:"Alerts / Notifications",    layer:"infra",   x:792, y:610, icon:"🔔", color:"#A78BFA", bg:"#2E1065" },
+};
+
+const edges = [
+  { from:"camera",      to:"ingest",      label:"S3 presigned upload",   color:"#38BDF8", dashed:false, arrow:"arr-blue"   },
+  { from:"voice",       to:"ws_server",   label:"WebSocket stream",       color:"#38BDF8", dashed:false, arrow:"arr-blue"   },
+  { from:"text",        to:"ingest",      label:"REST API",               color:"#38BDF8", dashed:false, arrow:"arr-blue"   },
+  { from:"mobile_app",  to:"api",         label:"HTTPS / JWT",            color:"#0EA5E9", dashed:false, arrow:"arr-blue"   },
+  { from:"auth_mobile", to:"cognito",     label:"OAuth2",                 color:"#818CF8", dashed:true,  arrow:"arr-purple" },
+  { from:"offline",     to:"ingest",      label:"Sync on connect",        color:"#38BDF8", dashed:true,  arrow:"arr-blue"   },
+  { from:"web_dash",    to:"api",         label:"HTTPS / JWT",            color:"#F97316", dashed:false, arrow:"arr-orange" },
+  { from:"feed",        to:"sse_server",  label:"SSE subscribe",          color:"#FB923C", dashed:false, arrow:"arr-orange" },
+  { from:"search_ui",   to:"search_svc",  label:"POST /search",           color:"#FB923C", dashed:false, arrow:"arr-orange" },
+  { from:"analytics",   to:"api",         label:"GET /analytics",         color:"#FB923C", dashed:false, arrow:"arr-orange" },
+  { from:"pdf",         to:"api",         label:"GET /reports/pdf",       color:"#FB923C", dashed:true,  arrow:"arr-orange" },
+  { from:"map",         to:"api",         label:"GET /sites",             color:"#FB923C", dashed:true,  arrow:"arr-orange" },
+  { from:"api",         to:"ingest",      label:"",                       color:"#4ADE80", dashed:false, arrow:"arr-green"  },
+  { from:"api",         to:"ai_pipeline", label:"",                       color:"#4ADE80", dashed:false, arrow:"arr-green"  },
+  { from:"api",         to:"search_svc",  label:"",                       color:"#4ADE80", dashed:false, arrow:"arr-green"  },
+  { from:"ingest",      to:"s3",          label:"Store media",            color:"#A78BFA", dashed:false, arrow:"arr-purple" },
+  { from:"ingest",      to:"lambda",      label:"Trigger preprocess",     color:"#A78BFA", dashed:true,  arrow:"arr-purple" },
+  { from:"lambda",      to:"ai_pipeline", label:"Invoke pipeline",        color:"#A78BFA", dashed:true,  arrow:"arr-purple" },
+  { from:"ai_pipeline", to:"nova_lite",   label:"Multimodal prompt",      color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"ws_server",   to:"nova_sonic",  label:"Audio stream",           color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"search_svc",  to:"nova_embed",  label:"Embed query",            color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"ai_pipeline", to:"nova_embed",  label:"Index report",           color:"#FBBF24", dashed:true,  arrow:"arr-nova"   },
+  { from:"ai_pipeline", to:"rds",         label:"Store report",           color:"#A78BFA", dashed:false, arrow:"arr-purple" },
+  { from:"search_svc",  to:"rds",         label:"pgvector search",        color:"#A78BFA", dashed:false, arrow:"arr-purple" },
+  { from:"api",         to:"cloudwatch",  label:"Logs",                   color:"#A78BFA", dashed:true,  arrow:"arr-purple" },
+  { from:"auth_api",    to:"cognito",     label:"Verify JWT",             color:"#818CF8", dashed:true,  arrow:"arr-purple" },
+  { from:"nova_lite",   to:"bedrock",     label:"",                       color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"nova_sonic",  to:"bedrock",     label:"",                       color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"nova_embed",  to:"bedrock",     label:"",                       color:"#FF9900", dashed:false, arrow:"arr-nova"   },
+  { from:"web_dash",    to:"cloudfront",  label:"CDN delivery",           color:"#A78BFA", dashed:true,  arrow:"arr-purple" },
+  { from:"ai_pipeline", to:"sns",         label:"Critical alert",         color:"#A78BFA", dashed:true,  arrow:"arr-purple" },
+];
+
+const NW = 110, NH = 50;
+function cx(id){ return nodes[id].x + NW/2; }
+function cy(id){ return nodes[id].y + NH/2; }
+
+function curvePath(from, to) {
+  const fx = cx(from), fy = cy(from);
+  const tx = cx(to),   ty = cy(to);
+  const mx = (fx+tx)/2, my = (fy+ty)/2;
+  const dx = tx-fx;
+  const bend = Math.abs(dx) > 200 ? 0 : Math.sign(dx) * 38;
+  return `M${fx},${fy} Q${mx+bend},${my} ${tx},${ty}`;
+}
+
+// Build edges
+const edgesG = document.getElementById('edges-group');
+edges.forEach((e, i) => {
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","edge");
+  g.dataset.from = e.from;
+  g.dataset.to   = e.to;
+  g.dataset.label = e.label || "";
+  g.dataset.color = e.color;
+  g.style.opacity = "0.22";
+
+  const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d", curvePath(e.from, e.to));
+  path.setAttribute("fill","none");
+  path.setAttribute("stroke", e.color);
+  path.setAttribute("stroke-width","1.3");
+  path.setAttribute("stroke-dasharray", e.dashed ? "5,4" : "none");
+  path.setAttribute("marker-end", `url(#${e.arrow})`);
+  g.appendChild(path);
+
+  // Edge label (hidden by default)
+  if (e.label) {
+    const fx=cx(e.from),fy=cy(e.from),tx=cx(e.to),ty=cy(e.to);
+    const dx=tx-fx, mx=(fx+tx)/2, my=(fy+ty)/2;
+    const bend = Math.abs(dx)>200?0:Math.sign(dx)*38;
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x", mx+bend*0.5);
+    t.setAttribute("y", my - 8);
+    t.setAttribute("font-size","7.5");
+    t.setAttribute("fill", e.color);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("font-family","monospace");
+    t.setAttribute("font-weight","700");
+    t.setAttribute("class","edge-label");
+    t.style.display = "none";
+    t.textContent = e.label;
+    g.appendChild(t);
+  }
+  edgesG.appendChild(g);
+});
+
+// Build nodes
+const nodesG = document.getElementById('nodes-group');
+Object.entries(nodes).forEach(([id, n]) => {
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","node");
+  g.setAttribute("transform",`translate(${n.x},${n.y})`);
+  g.dataset.id = id;
+  g.style.opacity = "1";
+
+  // Shadow
+  const shadow = document.createElementNS("http://www.w3.org/2000/svg","rect");
+  shadow.setAttribute("x","3"); shadow.setAttribute("y","3");
+  shadow.setAttribute("width",NW); shadow.setAttribute("height",NH);
+  shadow.setAttribute("rx","9"); shadow.setAttribute("fill","rgba(0,0,0,0.6)");
+  g.appendChild(shadow);
+
+  // Card
+  const card = document.createElementNS("http://www.w3.org/2000/svg","rect");
+  card.setAttribute("class","card");
+  card.setAttribute("width",NW); card.setAttribute("height",NH);
+  card.setAttribute("rx","9");
+  card.setAttribute("fill", n.bg);
+  card.setAttribute("stroke", n.color);
+  card.setAttribute("stroke-width","0.7");
+  g.appendChild(card);
+
+  // Top bar
+  const bar = document.createElementNS("http://www.w3.org/2000/svg","rect");
+  bar.setAttribute("width",NW); bar.setAttribute("height","3.5");
+  bar.setAttribute("rx","2"); bar.setAttribute("fill", n.color); bar.setAttribute("opacity","0.9");
+  g.appendChild(bar);
+
+  // Icon
+  const icon = document.createElementNS("http://www.w3.org/2000/svg","text");
+  icon.setAttribute("x","9"); icon.setAttribute("y","30");
+  icon.setAttribute("font-size","15"); icon.setAttribute("dominant-baseline","middle");
+  icon.textContent = n.icon;
+  g.appendChild(icon);
+
+  // Label
+  const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
+  lbl.setAttribute("x","29"); lbl.setAttribute("y","19");
+  lbl.setAttribute("font-size","8.5"); lbl.setAttribute("fill","#F1F5F9");
+  lbl.setAttribute("font-weight","700"); lbl.setAttribute("font-family","monospace");
+  lbl.textContent = n.label;
+  g.appendChild(lbl);
+
+  // Sub
+  const sub = document.createElementNS("http://www.w3.org/2000/svg","text");
+  sub.setAttribute("x","29"); sub.setAttribute("y","32");
+  sub.setAttribute("font-size","6.8"); sub.setAttribute("fill", n.color);
+  sub.setAttribute("opacity","0.85"); sub.setAttribute("font-family","monospace");
+  sub.textContent = n.sub;
+  g.appendChild(sub);
+
+  g.addEventListener("mouseenter", () => { if (!selectedId) activate(id); });
+  g.addEventListener("mouseleave", () => { if (!selectedId) deactivate(); });
+  g.addEventListener("click", () => {
+    if (selectedId === id) { selectedId = null; deactivate(); }
+    else { selectedId = id; activate(id); }
+  });
+
+  nodesG.appendChild(g);
+});
+
+let selectedId = null;
+
+function activate(id) {
+  const n = nodes[id];
+  const connectedIds = new Set([id,
+    ...edges.filter(e=>e.from===id||e.to===id).flatMap(e=>[e.from,e.to])
+  ]);
+
+  // Dim / highlight nodes
+  document.querySelectorAll(".node").forEach(g => {
+    const nid = g.dataset.id;
+    const isConn = connectedIds.has(nid);
+    g.style.opacity = isConn ? "1" : "0.13";
+    const card = g.querySelector(".card");
+    if (nid === id) {
+      card.setAttribute("stroke-width","2.8");
+      card.setAttribute("filter","url(#glow)");
+    } else if (isConn) {
+      card.setAttribute("stroke-width","1.8");
+      card.removeAttribute("filter");
+    } else {
+      card.setAttribute("stroke-width","0.7");
+      card.removeAttribute("filter");
+    }
+  });
+
+  // Dim / highlight edges
+  document.querySelectorAll(".edge").forEach(g => {
+    const isActive = g.dataset.from===id || g.dataset.to===id;
+    g.style.opacity = isActive ? "1" : "0.04";
+    const path = g.querySelector("path");
+    if (isActive) {
+      path.setAttribute("stroke-width","2.4");
+      path.setAttribute("filter","url(#softglow)");
+      const lbl = g.querySelector(".edge-label");
+      if (lbl) lbl.style.display = "block";
+    } else {
+      path.setAttribute("stroke-width","1.3");
+      path.removeAttribute("filter");
+      const lbl = g.querySelector(".edge-label");
+      if (lbl) lbl.style.display = "none";
+    }
+  });
+
+  // Zone labels
+  document.getElementById("zone-labels").style.opacity = "0.05";
+
+  // Info panel
+  const panel = document.getElementById("info-panel");
+  panel.style.borderColor = n.color + "55";
+  document.getElementById("info-default").style.display = "none";
+  document.getElementById("info-active").style.display = "block";
+
+  const iconEl = document.getElementById("info-icon");
+  iconEl.textContent = n.icon;
+  iconEl.style.background = n.bg;
+  iconEl.style.borderColor = n.color;
+
+  document.getElementById("info-name").textContent = n.label;
+  document.getElementById("info-name").style.color = n.color;
+  document.getElementById("info-sub").textContent = n.sub + " · " + n.layer.toUpperCase() + " LAYER";
+
+  const sendsTo = document.getElementById("sends-to");
+  const recvFrom = document.getElementById("receives-from");
+  sendsTo.innerHTML = "";
+  recvFrom.innerHTML = "";
+
+  const outEdges = edges.filter(e=>e.from===id);
+  const inEdges  = edges.filter(e=>e.to===id);
+
+  if (outEdges.length === 0) {
+    sendsTo.innerHTML = `<div style="font-size:10px;color:#334155">—</div>`;
+  } else {
+    outEdges.forEach(e => {
+      const d = document.createElement("div");
+      d.className = "info-row";
+      d.innerHTML = `<span class="arrow" style="color:${e.color}">→</span><span class="target" style="color:${e.color}">${nodes[e.to]?.label||e.to}</span>${e.label?`<span class="lbl">· ${e.label}</span>`:""}`;
+      sendsTo.appendChild(d);
+    });
+  }
+
+  if (inEdges.length === 0) {
+    recvFrom.innerHTML = `<div style="font-size:10px;color:#334155">—</div>`;
+  } else {
+    inEdges.forEach(e => {
+      const d = document.createElement("div");
+      d.className = "info-row";
+      d.innerHTML = `<span class="arrow" style="color:${e.color}">←</span><span class="target" style="color:${e.color}">${nodes[e.from]?.label||e.from}</span>${e.label?`<span class="lbl">· ${e.label}</span>`:""}`;
+      recvFrom.appendChild(d);
+    });
+  }
+}
+
+function deactivate() {
+  document.querySelectorAll(".node").forEach(g => {
+    g.style.opacity = "1";
+    const card = g.querySelector(".card");
+    card.setAttribute("stroke-width","0.7");
+    card.removeAttribute("filter");
+  });
+  document.querySelectorAll(".edge").forEach(g => {
+    g.style.opacity = "0.22";
+    const path = g.querySelector("path");
+    path.setAttribute("stroke-width","1.3");
+    path.removeAttribute("filter");
+    const lbl = g.querySelector(".edge-label");
+    if (lbl) lbl.style.display = "none";
+  });
+  document.getElementById("zone-labels").style.opacity = "0.3";
+  document.getElementById("info-panel").style.borderColor = "#1E293B";
+  document.getElementById("info-default").style.display = "flex";
+  document.getElementById("info-active").style.display = "none";
+}
+
+function clearActive() {
+  selectedId = null;
+  deactivate();
+}
+</script>
+</body>
+</html>
