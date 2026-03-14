@@ -6,6 +6,7 @@ from alembic import command
 from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal, check_database_health
@@ -13,6 +14,11 @@ from app.routers import analytics, auth, inspections, reports, search, stream, v
 from app.services.ai_service import ai_service
 from app.services.auth_service import ensure_seed_users
 from app.services.storage_service import storage_service
+
+
+SCHEMA_NOT_INITIALIZED_MESSAGE = (
+    "Database schema is not initialized; run Alembic or set RUN_MIGRATIONS_ON_STARTUP=true"
+)
 
 
 def validate_runtime_contract(settings) -> None:
@@ -49,6 +55,23 @@ async def maybe_run_migrations(settings) -> None:
     await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
 
 
+def is_missing_schema_error(exc: Exception) -> bool:
+    if not isinstance(exc, (OperationalError, ProgrammingError)):
+        return False
+
+    message = str(exc).lower()
+    if "organisations" not in message:
+        return False
+
+    missing_table_markers = (
+        "no such table",
+        "relation",
+        "does not exist",
+        "undefinedtable",
+    )
+    return any(marker in message for marker in missing_table_markers)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings = get_settings()
@@ -56,9 +79,14 @@ async def lifespan(_: FastAPI):
     validate_runtime_contract(settings)
     await maybe_run_migrations(settings)
 
-    async with SessionLocal() as session:
-        await ensure_seed_users(session)
-        await session.commit()
+    try:
+        async with SessionLocal() as session:
+            await ensure_seed_users(session)
+            await session.commit()
+    except Exception as exc:
+        if is_missing_schema_error(exc):
+            raise RuntimeError(SCHEMA_NOT_INITIALIZED_MESSAGE) from exc
+        raise
 
     yield
 

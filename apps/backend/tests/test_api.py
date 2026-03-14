@@ -1,8 +1,15 @@
 import os
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_fieldlens.db"
+TEST_DB_PATH = Path(tempfile.gettempdir()) / "fieldlens_test_api.db"
+if TEST_DB_PATH.exists():
+    TEST_DB_PATH.unlink()
+
+os.environ["ENVIRONMENT"] = "development"
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
 os.environ["AUTH_MODE"] = "jwt"
 os.environ["AI_MODE"] = "mock"
 os.environ["STORAGE_MODE"] = "local"
@@ -40,6 +47,50 @@ def test_health() -> None:
         assert body["status"] in {"ok", "degraded"}
         assert "database" in body["dependencies"]
         assert "storage" in body["dependencies"]
+
+
+def test_startup_fails_with_clear_message_when_schema_missing(tmp_path: Path) -> None:
+    database_path = tmp_path / "missing_schema.db"
+    env = os.environ.copy()
+    env.update(
+        {
+            "ENVIRONMENT": "development",
+            "DATABASE_URL": f"sqlite+aiosqlite:///{database_path}",
+            "AUTH_MODE": "jwt",
+            "AI_MODE": "mock",
+            "STORAGE_MODE": "local",
+            "JWT_SECRET_KEY": "test-secret",
+            "SEED_DEFAULT_USERS": "true",
+            "RUN_MIGRATIONS_ON_STARTUP": "false",
+        }
+    )
+
+    script = """
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path.cwd()))
+
+from fastapi.testclient import TestClient
+from app.main import app
+
+with TestClient(app):
+    pass
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=Path(__file__).resolve().parents[1],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert (
+        "Database schema is not initialized; run Alembic or set RUN_MIGRATIONS_ON_STARTUP=true"
+        in result.stderr
+    )
 
 
 def test_auth_login_and_me() -> None:

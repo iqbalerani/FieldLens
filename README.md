@@ -58,6 +58,14 @@ npm run dev:mobile
 - `AUTH_MODE=demo` keeps local token-only access available for quick scaffolding.
 - `AI_MODE=bedrock` uses Amazon Nova via Bedrock; `AI_MODE=mock` stays available for local development only.
 - `STORAGE_MODE=s3` returns presigned S3 uploads; `STORAGE_MODE=local` keeps backend uploads on disk for local work.
+- `RUN_MIGRATIONS_ON_STARTUP=true` runs `alembic upgrade head` during backend startup before demo-user seeding.
+
+## Startup and schema notes
+
+- Hosted first boot requires either `alembic upgrade head` ahead of time or `RUN_MIGRATIONS_ON_STARTUP=true`.
+- If the backend starts against an empty database without migrations, startup will fail before `/health` with:
+  `Database schema is not initialized; run Alembic or set RUN_MIGRATIONS_ON_STARTUP=true`
+- For local schema tests, override `ENVIRONMENT=development` so a checked-in production-style `.env` does not trigger the hosted runtime contract.
 
 ## Production contract
 
