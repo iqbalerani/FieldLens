@@ -1,0 +1,14 @@
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json package-lock.json tsconfig.base.json /app/
+COPY packages /app/packages
+COPY apps/web /app/apps/web
+
+RUN npm ci
+RUN npm run build:web
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "cd /app && PORT=${PORT:-3000} npm run start --workspace @fieldlens/web -- --hostname 0.0.0.0 --port ${PORT:-3000}"]

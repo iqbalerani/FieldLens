@@ -10,6 +10,11 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError:  # pragma: no cover - depends on local env
+    Vector = None
+
 revision: str = "001"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
@@ -17,6 +22,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+    is_postgres = bind.dialect.name == "postgresql"
+    embedding_type = Vector(1024) if is_postgres and Vector is not None else sa.JSON()
+
+    if is_postgres:
+        op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
     op.create_table(
         "organisations",
         sa.Column("id", sa.String(36), primary_key=True),
@@ -34,6 +46,8 @@ def upgrade() -> None:
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("email", sa.String(255), nullable=False, unique=True),
         sa.Column("role", sa.String(32), nullable=False, server_default="INSPECTOR"),
+        sa.Column("password_hash", sa.String(255), nullable=True),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
 
@@ -63,7 +77,7 @@ def upgrade() -> None:
         sa.Column("text_notes", sa.Text(), nullable=True),
         sa.Column("status", sa.String(32), nullable=False, server_default="draft"),
         sa.Column("report", sa.JSON(), nullable=True),
-        sa.Column("embedding", sa.JSON(), nullable=True),
+        sa.Column("embedding", embedding_type, nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("submitted_at", sa.DateTime(), nullable=True),
         sa.Column("processed_at", sa.DateTime(), nullable=True),
@@ -109,10 +123,23 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("query_text", sa.Text(), nullable=False),
-        sa.Column("query_embedding", sa.JSON(), nullable=True),
+        sa.Column("query_embedding", embedding_type, nullable=True),
         sa.Column("result_count", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
+
+    op.create_index("ix_inspections_org_created_at", "inspections", ["org_id", "created_at"])
+    op.create_index("ix_search_queries_user_created_at", "search_queries", ["user_id", "created_at"])
+
+    if is_postgres:
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_inspections_embedding_ivfflat "
+            "ON inspections USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_search_queries_embedding_ivfflat "
+            "ON search_queries USING ivfflat (query_embedding vector_cosine_ops) WITH (lists = 100)"
+        )
 
 
 def downgrade() -> None:

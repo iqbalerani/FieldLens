@@ -58,7 +58,7 @@ def serialize_detail(inspection: Inspection) -> InspectionDetailResponse:
             mimeType=item.mime_type,
             sizeBytes=item.size_bytes,
             uploadUrl=None,
-            previewUrl=item.preview_url,
+            previewUrl=storage_service.preview_url(item.s3_key),
         )
         for item in inspection.media
     ]
@@ -152,7 +152,7 @@ async def create(
                 s3Key=item.s3_key,
                 mimeType=item.mime_type,
                 sizeBytes=item.size_bytes,
-                uploadUrl=storage_service.build_local_upload_url(inspection.id, item.id),
+                uploadUrl=storage_service.create_upload_url(inspection.id, item.id, item.s3_key, item.mime_type),
                 previewUrl=item.preview_url,
             )
             for item in media_items
@@ -246,7 +246,7 @@ async def upload_media(
         raise HTTPException(status_code=404, detail="Media target not found")
 
     await storage_service.save_upload(media.s3_key, file)
-    media.preview_url = storage_service.preview_url(media.s3_key)
+    media.preview_url = None
     media.mime_type = file.content_type or media.mime_type
     await session.commit()
     return MediaUploadTarget(
@@ -256,5 +256,5 @@ async def upload_media(
         mimeType=media.mime_type,
         sizeBytes=media.size_bytes,
         uploadUrl=None,
-        previewUrl=media.preview_url,
+        previewUrl=storage_service.preview_url(media.s3_key),
     )

@@ -1,5 +1,7 @@
+import base64
 import json
 import math
+import re
 from collections import Counter
 from typing import Any
 
@@ -9,53 +11,80 @@ from app.core.config import get_settings
 
 
 SYSTEM_PROMPT = (
-    "You are FieldLens AI, an expert inspection analyst. Return only valid JSON "
-    "with summary, overall_status, confidence_score, issues, recommendations, "
-    "missing_info, and comparison_with_prior."
+    "You are FieldLens AI, an expert inspection analyst. "
+    "Return valid JSON with the keys summary, overall_status, confidence_score, "
+    "issues, recommendations, missing_info, and comparison_with_prior."
 )
+
+
+class AIServiceError(Exception):
+    pass
 
 
 class AIService:
     def __init__(self) -> None:
         self.settings = get_settings()
-        self._bedrock = None
+        self._bedrock_runtime = None
+        self._bedrock_control = None
 
     @property
-    def bedrock(self):
-        if self._bedrock is None:
-            self._bedrock = boto3.client("bedrock-runtime", region_name=self.settings.aws_region)
-        return self._bedrock
+    def bedrock_runtime(self):
+        if self._bedrock_runtime is None:
+            self._bedrock_runtime = boto3.client("bedrock-runtime", region_name=self.settings.aws_region)
+        return self._bedrock_runtime
 
-    def embed_text(self, text: str) -> list[float]:
-        if self.settings.ai_mode == "bedrock":
-            try:
-                return self._embed_text_bedrock(text)
-            except Exception:
-                pass
+    @property
+    def bedrock_control(self):
+        if self._bedrock_control is None:
+            self._bedrock_control = boto3.client("bedrock", region_name=self.settings.aws_region)
+        return self._bedrock_control
+
+    def check_health(self) -> None:
+        if not self.settings.bedrock_enabled:
+            return
+        self.bedrock_control.list_foundation_models(byProvider="Amazon")
+
+    def embed_text(self, text: str, *, query: bool = False) -> list[float]:
+        if not text.strip():
+            return self._zero_embedding()
+        if self.settings.bedrock_enabled:
+            return self._embed_text_bedrock(
+                text,
+                task_type=self.settings.nova_embed_query_task_type if query else self.settings.nova_embed_document_task_type,
+            )
         return self._embed_text_mock(text)
 
-    def _embed_text_mock(self, text: str) -> list[float]:
-        buckets = [0.0] * 32
-        tokens = text.lower().split()
-        if not tokens:
-            return buckets
-        counts = Counter(tokens)
-        for token, count in counts.items():
-            index = sum(ord(char) for char in token) % len(buckets)
-            buckets[index] += float(count)
-        norm = math.sqrt(sum(value * value for value in buckets)) or 1.0
-        return [value / norm for value in buckets]
+    def embed_image(self, image_bytes: bytes, *, image_format: str = "jpeg") -> list[float]:
+        if not image_bytes:
+            return self._zero_embedding()
+        if self.settings.bedrock_enabled:
+            return self._embed_image_bedrock(
+                image_bytes=image_bytes,
+                image_format=image_format,
+                task_type=self.settings.nova_embed_image_task_type,
+            )
+        return self._embed_text_mock(f"image:{len(image_bytes)}:{image_format}")
 
-    def _embed_text_bedrock(self, text: str) -> list[float]:
-        body = json.dumps({"inputText": text})
-        response = self.bedrock.invoke_model(
-            modelId=self.settings.nova_embed_model_id,
-            body=body,
-            accept="application/json",
-            contentType="application/json",
-        )
-        payload = json.loads(response["body"].read())
-        return payload.get("embedding") or payload.get("embeddingsByType", {}).get("text") or self._embed_text_mock(text)
+    def build_inspection_embedding(
+        self,
+        *,
+        site_name: str,
+        transcript: str,
+        text_notes: str,
+        report_summary: str,
+        preprocessed_images: list[dict[str, Any]] | None = None,
+    ) -> list[float]:
+        vectors: list[list[float]] = []
+        text_blob = " ".join(part for part in [site_name, transcript, text_notes, report_summary] if part).strip()
+        if text_blob:
+            vectors.append(self.embed_text(text_blob))
+
+        for image in preprocessed_images or []:
+            image_bytes = image.get("bytes")
+            if image_bytes:
+                vectors.append(self.embed_image(image_bytes, image_format=image.get("format", "jpeg")))
+
+        return self._average_embeddings(vectors) if vectors else self._zero_embedding()
 
     def generate_report(
         self,
@@ -69,21 +98,17 @@ class AIService:
         media_count: int,
         preprocessed_images: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        images = preprocessed_images or []
-        if self.settings.ai_mode == "bedrock":
-            try:
-                return self._generate_report_bedrock(
-                    site_name=site_name,
-                    inspection_type=inspection_type,
-                    inspector_name=inspector_name,
-                    transcript=transcript,
-                    text_notes=text_notes,
-                    similar_inspections=similar_inspections,
-                    media_count=media_count,
-                    preprocessed_images=images,
-                )
-            except Exception:
-                pass
+        if self.settings.bedrock_enabled:
+            return self._generate_report_bedrock(
+                site_name=site_name,
+                inspection_type=inspection_type,
+                inspector_name=inspector_name,
+                transcript=transcript,
+                text_notes=text_notes,
+                similar_inspections=similar_inspections,
+                media_count=media_count,
+                preprocessed_images=preprocessed_images or [],
+            )
         return self._generate_report_mock(
             site_name=site_name,
             inspection_type=inspection_type,
@@ -93,6 +118,84 @@ class AIService:
             similar_inspections=similar_inspections,
             media_count=media_count,
         )
+
+    def _zero_embedding(self) -> list[float]:
+        return [0.0] * self.settings.nova_embed_dimensions
+
+    def _average_embeddings(self, vectors: list[list[float]]) -> list[float]:
+        if not vectors:
+            return self._zero_embedding()
+        length = min(len(vector) for vector in vectors)
+        averaged = [
+            sum(vector[index] for vector in vectors) / len(vectors)
+            for index in range(length)
+        ]
+        norm = math.sqrt(sum(value * value for value in averaged)) or 1.0
+        return [value / norm for value in averaged]
+
+    def _embed_text_mock(self, text: str) -> list[float]:
+        buckets = [0.0] * self.settings.nova_embed_dimensions
+        tokens = text.lower().split()
+        if not tokens:
+            return buckets
+        counts = Counter(tokens)
+        for token, count in counts.items():
+            index = sum(ord(char) for char in token) % len(buckets)
+            buckets[index] += float(count)
+        norm = math.sqrt(sum(value * value for value in buckets)) or 1.0
+        return [value / norm for value in buckets]
+
+    def _invoke_embedding_model(self, body: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                modelId=self.settings.nova_embed_model_id,
+                body=json.dumps(body),
+                accept="application/json",
+                contentType="application/json",
+            )
+        except Exception as exc:  # pragma: no cover - depends on AWS credentials
+            raise AIServiceError(f"Nova embeddings request failed: {exc}") from exc
+
+        payload = json.loads(response["body"].read())
+        try:
+            return payload
+        except Exception as exc:  # pragma: no cover - defensive
+            raise AIServiceError("Nova embeddings response could not be parsed") from exc
+
+    def _embed_text_bedrock(self, text: str, *, task_type: str) -> list[float]:
+        payload = self._invoke_embedding_model(
+            {
+                "inputType": task_type,
+                "texts": [text],
+                "embeddingTypes": ["float"],
+                "dimension": self.settings.nova_embed_dimensions,
+            }
+        )
+        try:
+            return payload["embeddingsByType"]["float"][0]
+        except (KeyError, IndexError) as exc:
+            raise AIServiceError("Nova embeddings response missing float embeddings") from exc
+
+    def _embed_image_bedrock(self, *, image_bytes: bytes, image_format: str, task_type: str) -> list[float]:
+        payload = self._invoke_embedding_model(
+            {
+                "inputType": task_type,
+                "images": [
+                    {
+                        "format": image_format,
+                        "source": {
+                            "bytes": base64.b64encode(image_bytes).decode("utf-8"),
+                        },
+                    }
+                ],
+                "embeddingTypes": ["float"],
+                "dimension": self.settings.nova_embed_dimensions,
+            }
+        )
+        try:
+            return payload["embeddingsByType"]["float"][0]
+        except (KeyError, IndexError) as exc:
+            raise AIServiceError("Nova image embedding response missing float embeddings") from exc
 
     def _generate_report_mock(
         self,
@@ -167,47 +270,66 @@ class AIService:
         text_notes: str,
         similar_inspections: list[dict[str, Any]],
         media_count: int,
-        preprocessed_images: list[dict[str, Any]] | None = None,
+        preprocessed_images: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        text_part = {
-            "text": (
-                f"Site: {site_name}\n"
-                f"Type: {inspection_type}\n"
-                f"Inspector: {inspector_name}\n"
-                f"Transcript: {transcript or 'None'}\n"
-                f"Text notes: {text_notes or 'None'}\n"
-                f"Similar inspections: {json.dumps(similar_inspections[:3])}\n"
-                f"Media count: {media_count}\n"
-                "Return only valid JSON with snake_case keys."
-            )
-        }
-        content: list[dict[str, Any]] = [text_part]
-        for img in (preprocessed_images or []):
+        content: list[dict[str, Any]] = [
+            {
+                "text": (
+                    f"Site: {site_name}\n"
+                    f"Type: {inspection_type}\n"
+                    f"Inspector: {inspector_name}\n"
+                    f"Transcript: {transcript or 'None'}\n"
+                    f"Text notes: {text_notes or 'None'}\n"
+                    f"Similar inspections: {json.dumps(similar_inspections[:3])}\n"
+                    f"Media count: {media_count}\n"
+                    "Interpret photos in the context of the inspection.\n"
+                    "Return only valid JSON with snake_case keys."
+                )
+            }
+        ]
+        for image in preprocessed_images:
+            image_bytes = image.get("bytes")
+            if not image_bytes:
+                continue
             content.append(
                 {
                     "image": {
-                        "format": "jpeg",
-                        "source": {"bytes": bytes.fromhex(img["base64"]) if isinstance(img["base64"], str) else img["base64"]},
+                        "format": image.get("format", "jpeg"),
+                        "source": {"bytes": image_bytes},
                     }
                 }
             )
-        response = self.bedrock.converse(
-            modelId=self.settings.nova_lite_model_id,
-            system=[{"text": SYSTEM_PROMPT}],
-            messages=[{"role": "user", "content": content}],
-        )
+
+        try:
+            response = self.bedrock_runtime.converse(
+                modelId=self.settings.nova_lite_model_id,
+                system=[{"text": SYSTEM_PROMPT}],
+                messages=[{"role": "user", "content": content}],
+                inferenceConfig={"maxTokens": 1200, "temperature": 0.2},
+            )
+        except Exception as exc:  # pragma: no cover - depends on AWS credentials
+            raise AIServiceError(f"Nova Lite request failed: {exc}") from exc
+
         text_chunks = [
             block.get("text", "")
             for block in response["output"]["message"]["content"]
             if "text" in block
         ]
         raw = "".join(text_chunks).strip()
-        # Strip markdown fences if Nova returns them despite instructions
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw.strip())
+        cleaned = self._clean_json_payload(raw)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise AIServiceError(f"Nova Lite returned invalid JSON: {raw}") from exc
+
+    def _clean_json_payload(self, raw: str) -> str:
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.strip("`")
+            cleaned = cleaned.removeprefix("json").strip()
+
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        return match.group(0) if match else cleaned
 
 
 ai_service = AIService()

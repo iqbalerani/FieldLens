@@ -123,3 +123,14 @@ export interface CurrentUser {
   name: string;
   role: "ADMIN" | "SUPERVISOR" | "INSPECTOR";
 }
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  tokenType: "bearer";
+  user: CurrentUser;
+}

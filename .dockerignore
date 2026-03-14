@@ -1,0 +1,13 @@
+.git
+.next
+node_modules
+apps/web/.next
+apps/backend/.venv
+apps/mobile/.expo
+apps/mobile/node_modules
+apps/web/node_modules
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+fieldlens.db
+test_fieldlens.db

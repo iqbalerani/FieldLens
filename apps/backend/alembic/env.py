@@ -30,22 +30,24 @@ def get_url() -> str:
 
 def run_migrations_offline() -> None:
     url = get_url()
+    render_as_batch = url.startswith("sqlite")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # required for SQLite ALTER TABLE support
+        render_as_batch=render_as_batch,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
+    render_as_batch = connection.dialect.name == "sqlite"
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
+        render_as_batch=render_as_batch,
     )
     with context.begin_transaction():
         context.run_migrations()

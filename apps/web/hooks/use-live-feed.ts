@@ -12,8 +12,12 @@ export function useLiveFeed(orgId: string | undefined) {
     if (!orgId) {
       return;
     }
+    const token = getStoredToken();
+    if (!token) {
+      return;
+    }
     const url = new URL(`/stream/inspections/${orgId}`, getApiBaseUrl());
-    url.searchParams.set("token", getStoredToken());
+    url.searchParams.set("token", token);
     const source = new EventSource(url.toString());
     const refresh = () => {
       void queryClient.invalidateQueries({ queryKey: ["inspections"] });

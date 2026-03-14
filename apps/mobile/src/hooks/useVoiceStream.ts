@@ -4,17 +4,29 @@ import { api } from "../api/client";
 
 type RecordingState = "idle" | "recording" | "processing";
 
-/**
- * Real voice recording hook using expo-av.
- *
- * Flow:
- *  1. startRecording() — requests mic permission, starts Audio.Recording
- *  2. stopRecording()  — stops recording, uploads the audio file to
- *                        POST /voice/transcribe, returns the transcript text
- *
- * Legacy fallback: streamWords() sends pre-written text word-by-word over the
- * WebSocket so the demo works without a real microphone.
- */
+const WAV_RECORDING_OPTIONS: Audio.RecordingOptions = {
+  android: {
+    extension: ".wav",
+    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+  },
+  ios: {
+    extension: ".wav",
+    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+    audioQuality: Audio.IOSAudioQuality.MAX,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {},
+};
+
 export function useVoiceStream() {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -51,23 +63,76 @@ export function useVoiceStream() {
       if (status !== "granted") {
         return;
       }
+      setTranscript("");
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
+      const { recording } = await Audio.Recording.createAsync(WAV_RECORDING_OPTIONS);
       recordingRef.current = recording;
       setRecordingState("recording");
-      setConnected(true);
       startDurationTimer();
     } catch {
       setRecordingState("idle");
     }
   }
 
+  async function streamAudioFile(uri: string): Promise<string> {
+    const url = api.getBaseUrl().replace(/^http/, "ws") + `/ws/voice/voice-${Date.now()}`;
+    const base64 = await api.readFileBase64(uri);
+    const chunkSize = 16_384;
+    let finalTranscript = "";
+
+    return new Promise<string>((resolve, reject) => {
+      socketRef.current?.close();
+      const socket = new WebSocket(url);
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        setConnected(true);
+        socket.send(JSON.stringify({ type: "start", contentType: "audio/wav" }));
+      };
+
+      socket.onmessage = (event) => {
+        const payload = JSON.parse(event.data as string) as { type?: string; text?: string; message?: string };
+        if (payload.type === "ready") {
+          for (let index = 0; index < base64.length; index += chunkSize) {
+            socket.send(JSON.stringify({ type: "audio_chunk", content: base64.slice(index, index + chunkSize) }));
+          }
+          socket.send(JSON.stringify({ type: "end" }));
+          return;
+        }
+        if (payload.type === "partial_transcript" && payload.text) {
+          setTranscript(payload.text);
+          return;
+        }
+        if (payload.type === "final_transcript" && payload.text) {
+          finalTranscript = payload.text;
+          setTranscript(payload.text);
+          return;
+        }
+        if (payload.type === "completed") {
+          const text = payload.text ?? finalTranscript;
+          setConnected(false);
+          socket.close();
+          resolve(text ?? "");
+          return;
+        }
+        if (payload.type === "error") {
+          setConnected(false);
+          socket.close();
+          reject(new Error(payload.message ?? "Voice streaming failed"));
+        }
+      };
+
+      socket.onerror = () => {
+        setConnected(false);
+        reject(new Error("Voice websocket connection failed"));
+      };
+      socket.onclose = () => setConnected(false);
+    });
+  }
+
   async function stopRecording(): Promise<string> {
     stopDurationTimer();
     setRecordingState("processing");
-    setConnected(false);
     const recording = recordingRef.current;
     if (!recording) {
       setRecordingState("idle");
@@ -81,7 +146,14 @@ export function useVoiceStream() {
         setRecordingState("idle");
         return "";
       }
-      const text = await api.transcribeAudio(uri);
+
+      let text = "";
+      try {
+        text = await streamAudioFile(uri);
+      } catch {
+        text = await api.transcribeAudio(uri);
+      }
+
       setTranscript(text);
       setRecordingState("idle");
       return text;
@@ -91,27 +163,5 @@ export function useVoiceStream() {
     }
   }
 
-  /** Legacy WebSocket text-simulation — keeps demo working without mic. */
-  function streamWords(sessionId: string, input: string): void {
-    const url = api.getBaseUrl().replace("http", "ws") + `/ws/voice/${sessionId}`;
-    socketRef.current?.close();
-    const socket = new WebSocket(url);
-    socketRef.current = socket;
-    socket.onopen = () => {
-      setConnected(true);
-      const words = input.split(/\s+/).filter(Boolean);
-      words.forEach((word, index) => {
-        setTimeout(() => {
-          socket.send(JSON.stringify({ text: word, final: index === words.length - 1 }));
-        }, index * 110);
-      });
-    };
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data as string) as { text?: string };
-      if (payload.text) setTranscript(payload.text);
-    };
-    socket.onclose = () => setConnected(false);
-  }
-
-  return { transcript, setTranscript, connected, recordingState, durationMs, startRecording, stopRecording, streamWords };
+  return { transcript, setTranscript, connected, recordingState, durationMs, startRecording, stopRecording };
 }

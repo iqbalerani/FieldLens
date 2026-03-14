@@ -120,10 +120,13 @@ npm run typecheck --workspace @fieldlens/web
 npm run build --workspace @fieldlens/web
 
 $commonEnv = @{
-  AUTH_MODE = "demo"
+  AUTH_MODE = "jwt"
   AI_MODE = "mock"
   STORAGE_MODE = "local"
   DATABASE_URL = "sqlite+aiosqlite:///./fieldlens.db"
+  JWT_SECRET_KEY = "local-dev-secret"
+  RUN_MIGRATIONS_ON_STARTUP = "true"
+  SEED_DEFAULT_USERS = "true"
   FRONTEND_URL = "http://127.0.0.1:3000"
   NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8000"
   EXPO_PUBLIC_API_BASE_URL = "http://127.0.0.1:8000"

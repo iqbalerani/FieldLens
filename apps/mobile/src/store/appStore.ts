@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { InspectionDetail, InspectionSummary } from "@fieldlens/shared";
+import type { CurrentUser, InspectionDetail, InspectionSummary } from "@fieldlens/shared";
 
 export type LocalPhoto = {
   id: string;
@@ -32,11 +32,14 @@ export type PendingInspection = {
 
 type AppState = {
   token: string | null;
+  currentUser: CurrentUser | null;
   draft: InspectionDraft;
   inspections: InspectionSummary[];
   inspectionDetail: InspectionDetail | null;
   pendingQueue: PendingInspection[];
-  setToken: (token: string) => void;
+  setToken: (token: string | null) => void;
+  setCurrentUser: (user: CurrentUser | null) => void;
+  logout: () => void;
   updateDraft: (draft: Partial<InspectionDraft>) => void;
   resetDraft: () => void;
   setInspections: (inspections: InspectionSummary[]) => void;
@@ -60,12 +63,15 @@ export const emptyDraft: InspectionDraft = {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      token: "demo-inspector",
+      token: null,
+      currentUser: null,
       draft: emptyDraft,
       inspections: [],
       inspectionDetail: null,
       pendingQueue: [],
       setToken: (token) => set({ token }),
+      setCurrentUser: (currentUser) => set({ currentUser }),
+      logout: () => set({ token: null, currentUser: null, inspections: [], inspectionDetail: null }),
       updateDraft: (draft) => set((state) => ({ draft: { ...state.draft, ...draft } })),
       resetDraft: () => set({ draft: emptyDraft }),
       setInspections: (inspections) => set({ inspections }),

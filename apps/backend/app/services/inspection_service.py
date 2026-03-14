@@ -1,4 +1,3 @@
-import base64
 import io
 import logging
 from datetime import UTC, datetime
@@ -49,10 +48,10 @@ def _notify_critical_issues(inspection_id: str, site_name: str, issues: list[dic
 
 
 def _preprocess_media_files(inspection: Inspection) -> list[dict[str, Any]]:
-    """Load, validate, and base64-encode local media files for AI ingestion.
+    """Load, validate, and normalize media files for AI ingestion.
 
-    Replaces the Lambda preprocessing step: images are resized to at most 1024 px
-    on the longest edge and returned as base64 strings ready for Nova 2 Lite.
+    Images are resized to at most 1024 px on the longest edge and returned as
+    raw JPEG bytes ready for Nova Lite and Nova embeddings.
     """
     try:
         from PIL import Image
@@ -64,11 +63,8 @@ def _preprocess_media_files(inspection: Inspection) -> list[dict[str, Any]]:
     for media in inspection.media:
         if media.type.value != "photo":
             continue
-        local_path = settings.data_dir / "uploads" / media.s3_key.lstrip("/")
-        if not local_path.exists():
-            continue
         try:
-            img = Image.open(local_path).convert("RGB")
+            img = Image.open(io.BytesIO(storage_service.read_bytes(media.s3_key))).convert("RGB")
             max_side = 1024
             w, h = img.size
             if max(w, h) > max_side:
@@ -80,7 +76,8 @@ def _preprocess_media_files(inspection: Inspection) -> list[dict[str, Any]]:
                 {
                     "id": media.id,
                     "mime_type": "image/jpeg",
-                    "base64": base64.b64encode(buf.getvalue()).decode(),
+                    "format": "jpeg",
+                    "bytes": buf.getvalue(),
                 }
             )
         except Exception as exc:
@@ -156,7 +153,7 @@ async def register_media(session: AsyncSession, inspection: Inspection, payload:
         media.s3_key = item.s3_key
         media.mime_type = item.mime_type
         media.size_bytes = item.size_bytes
-        media.preview_url = storage_service.preview_url(item.s3_key) if item.s3_key else media.preview_url
+        media.preview_url = None
 
     if payload.voice_transcript:
         if inspection.transcript is None:
@@ -213,12 +210,12 @@ async def process_inspection(session: AsyncSession, inspection: Inspection) -> I
         preprocessed_images=preprocessed_images,
     )
     inspection.report = report
-    inspection.embedding = ai_service.embed_text(
-        " ".join(
-            part
-            for part in [inspection.site_name, transcript, inspection.text_notes or "", report.get("summary", "")]
-            if part
-        )
+    inspection.embedding = ai_service.build_inspection_embedding(
+        site_name=inspection.site_name,
+        transcript=transcript,
+        text_notes=inspection.text_notes or "",
+        report_summary=report.get("summary", ""),
+        preprocessed_images=preprocessed_images,
     )
 
     for existing_issue in list(inspection.issues):
@@ -273,7 +270,7 @@ async def log_search(session: AsyncSession, user_id: str, query_text: str, resul
         SearchQuery(
             user_id=user_id,
             query_text=query_text,
-            query_embedding=ai_service.embed_text(query_text),
+            query_embedding=ai_service.embed_text(query_text, query=True),
             result_count=result_count,
         )
     )

@@ -3,6 +3,8 @@ import type {
   CurrentUser,
   InspectionDetail,
   InspectionSummary,
+  LoginPayload,
+  LoginResponse,
   SearchResult,
 } from "@fieldlens/shared";
 import { getStoredToken } from "./auth";
@@ -10,11 +12,12 @@ import { getStoredToken } from "./auth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getStoredToken()}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
@@ -31,6 +34,13 @@ export function getApiBaseUrl() {
 
 export function fetchCurrentUser() {
   return request<CurrentUser>("/auth/me");
+}
+
+export function login(body: LoginPayload) {
+  return request<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchInspections(params?: { status?: string; limit?: number; offset?: number }) {
@@ -56,4 +66,3 @@ export function searchInspections(query: string) {
     body: JSON.stringify({ query }),
   });
 }
-

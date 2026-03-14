@@ -2,10 +2,11 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.models.types import EmbeddingVector
 
 
 class UserRole(str, enum.Enum):
@@ -61,6 +62,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255))
     email: Mapped[str] = mapped_column(String(255), unique=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.INSPECTOR)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     organisation: Mapped[Organisation] = relationship(lazy="selectin")
@@ -94,7 +97,7 @@ class Inspection(Base):
     text_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[InspectionStatus] = mapped_column(Enum(InspectionStatus), default=InspectionStatus.DRAFT)
     report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    embedding: Mapped[list[float] | None] = mapped_column(JSON, nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingVector(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -148,6 +151,6 @@ class SearchQuery(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=default_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     query_text: Mapped[str] = mapped_column(Text)
-    query_embedding: Mapped[list[float] | None] = mapped_column(JSON, nullable=True)
+    query_embedding: Mapped[list[float] | None] = mapped_column(EmbeddingVector(1024), nullable=True)
     result_count: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)

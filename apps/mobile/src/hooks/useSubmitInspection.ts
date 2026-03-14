@@ -51,8 +51,8 @@ export function useSubmitInspection() {
       for (let i = 0; i < created.uploadTargets.length; i++) {
         const target = created.uploadTargets[i];
         const photo = draft.photos[i];
-        if (photo) {
-          await api.uploadPhoto(token, created.inspectionId, target.id, photo);
+        if (photo && target.uploadUrl) {
+          await api.uploadPhoto(token, created.inspectionId, target.id, target.uploadUrl, photo);
         }
       }
 

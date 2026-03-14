@@ -6,7 +6,7 @@ import { TrendChart } from "../../../components/trend-chart";
 import { fetchAnalytics } from "../../../lib/api";
 
 export default function AnalyticsPage() {
-  const analyticsQuery = useQuery({ queryKey: ["analytics"], queryFn: fetchAnalytics });
+  const analyticsQuery = useQuery({ queryKey: ["analytics"], queryFn: () => fetchAnalytics() });
 
   return (
     <DashboardShell

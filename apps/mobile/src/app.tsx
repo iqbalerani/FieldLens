@@ -106,8 +106,8 @@ function HistoryTabScreen() {
 }
 
 function SettingsTabScreen() {
-  const { resetDraft } = useAppStore();
-  return <SettingsScreen onResetDraft={resetDraft} />;
+  const { resetDraft, logout } = useAppStore();
+  return <SettingsScreen onResetDraft={resetDraft} onLogout={logout} />;
 }
 
 // ─── Stack screens (push over tabs with back button) ────────────────────────
@@ -182,7 +182,24 @@ function MainTabs() {
 // ─── Root app ────────────────────────────────────────────────────────────────
 
 export function MobileApp() {
-  const { token, setToken } = useAppStore();
+  const { token, setToken, setCurrentUser, logout } = useAppStore();
+
+  useEffect(() => {
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
+    api.me(token).then(setCurrentUser).catch(() => {
+      setCurrentUser(null);
+      logout();
+    });
+  }, [logout, setCurrentUser, token]);
+
+  const handleLogin = async (email: string, password: string) => {
+    const response = await api.login({ email, password });
+    setToken(response.accessToken);
+    setCurrentUser(response.user);
+  };
 
   return (
     <NavigationContainer>
@@ -196,7 +213,7 @@ export function MobileApp() {
       >
         {!token ? (
           <RootStack.Screen name="Login" options={{ headerShown: false }}>
-            {() => <LoginScreen onSelect={setToken} />}
+            {() => <LoginScreen onSubmit={handleLogin} />}
           </RootStack.Screen>
         ) : (
           <>

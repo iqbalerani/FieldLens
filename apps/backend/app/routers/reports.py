@@ -15,6 +15,25 @@ from app.schemas.auth import CurrentUserResponse
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
+def _pdf_safe(value: str | None, *, default: str = "N/A") -> str:
+    text = (value or "").strip() or default
+    text = text.translate(
+        str.maketrans(
+            {
+                "\u2013": "-",
+                "\u2014": "-",
+                "\u2018": "'",
+                "\u2019": "'",
+                "\u201c": '"',
+                "\u201d": '"',
+                "\u2022": "-",
+                "\u2026": "...",
+            }
+        )
+    )
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
 def _build_pdf(inspection: Inspection) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -37,18 +56,22 @@ def _build_pdf(inspection: Inspection) -> bytes:
     pdf.set_text_color(80, 80, 80)
 
     def kv(label: str, value: str) -> None:
+        start_x = pdf.get_x()
+        start_y = pdf.get_y()
         pdf.set_font("Helvetica", "B", 10)
         pdf.set_text_color(100, 100, 100)
-        pdf.cell(45, 7, label + ":", new_x="RIGHT", new_y="LAST")
+        pdf.cell(45, 7, label + ":", new_x="RIGHT", new_y="TOP")
         pdf.set_font("Helvetica", "", 10)
         pdf.set_text_color(20, 20, 20)
-        pdf.multi_cell(0, 7, value or "—")
+        pdf.set_xy(start_x + 45, start_y)
+        value_width = max(pdf.w - pdf.r_margin - pdf.get_x(), 40)
+        pdf.multi_cell(value_width, 7, _pdf_safe(value), new_x="LMARGIN", new_y="NEXT")
 
     kv("Site", inspection.site_name)
     kv("Type", inspection.inspection_type)
     kv("Inspector", inspection.inspector_name)
     kv("Status", str(inspection.status.value).capitalize())
-    kv("Created", inspection.created_at.strftime("%Y-%m-%d %H:%M UTC") if inspection.created_at else "—")
+    kv("Created", inspection.created_at.strftime("%Y-%m-%d %H:%M UTC") if inspection.created_at else "N/A")
     if inspection.processed_at:
         kv("Processed", inspection.processed_at.strftime("%Y-%m-%d %H:%M UTC"))
     if inspection.latitude and inspection.longitude:
@@ -83,7 +106,7 @@ def _build_pdf(inspection: Inspection) -> bytes:
             pdf.cell(0, 7, "Summary", new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("Helvetica", "", 10)
             pdf.set_text_color(60, 60, 60)
-            pdf.multi_cell(0, 6, summary)
+            pdf.multi_cell(0, 6, _pdf_safe(summary))
             pdf.ln(4)
 
         issues = report.get("issues", [])
@@ -102,17 +125,17 @@ def _build_pdf(inspection: Inspection) -> bytes:
                 sc = severity_colors.get(sev, (60, 60, 60))
                 pdf.set_font("Helvetica", "B", 10)
                 pdf.set_text_color(*sc)
-                pdf.cell(0, 7, f"[{sev}] {issue.get('title', '')}", new_x="LMARGIN", new_y="NEXT")
+                pdf.cell(0, 7, _pdf_safe(f"[{sev}] {issue.get('title', '')}"), new_x="LMARGIN", new_y="NEXT")
                 pdf.set_font("Helvetica", "", 9)
                 pdf.set_text_color(60, 60, 60)
-                pdf.multi_cell(0, 5, issue.get("description", ""))
+                pdf.multi_cell(0, 5, _pdf_safe(issue.get("description", "")))
                 area = issue.get("affected_area", "")
                 action = issue.get("suggested_action", "")
                 if area:
                     pdf.set_font("Helvetica", "I", 9)
-                    pdf.cell(0, 5, f"Area: {area}", new_x="LMARGIN", new_y="NEXT")
+                    pdf.cell(0, 5, _pdf_safe(f"Area: {area}"), new_x="LMARGIN", new_y="NEXT")
                 if action:
-                    pdf.cell(0, 5, f"Action: {action}", new_x="LMARGIN", new_y="NEXT")
+                    pdf.cell(0, 5, _pdf_safe(f"Action: {action}"), new_x="LMARGIN", new_y="NEXT")
                 pdf.ln(3)
 
         recommendations = report.get("recommendations", [])
@@ -124,7 +147,7 @@ def _build_pdf(inspection: Inspection) -> bytes:
             pdf.set_font("Helvetica", "", 10)
             pdf.set_text_color(60, 60, 60)
             for rec in recommendations:
-                pdf.multi_cell(0, 6, f"• {rec}")
+                pdf.multi_cell(0, 6, _pdf_safe(f"- {rec}"))
             pdf.ln(2)
 
         comparison = report.get("comparison_with_prior", "")
@@ -134,7 +157,7 @@ def _build_pdf(inspection: Inspection) -> bytes:
             pdf.cell(0, 7, "Comparison with Prior Inspections", new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("Helvetica", "", 10)
             pdf.set_text_color(60, 60, 60)
-            pdf.multi_cell(0, 6, comparison)
+            pdf.multi_cell(0, 6, _pdf_safe(comparison))
             pdf.ln(2)
     else:
         pdf.set_font("Helvetica", "I", 10)
@@ -150,7 +173,7 @@ def _build_pdf(inspection: Inspection) -> bytes:
         pdf.cell(0, 7, "Voice Transcript", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", "", 10)
         pdf.set_text_color(60, 60, 60)
-        pdf.multi_cell(0, 6, transcript.transcript_text)
+        pdf.multi_cell(0, 6, _pdf_safe(transcript.transcript_text))
 
     # Footer
     pdf.ln(8)

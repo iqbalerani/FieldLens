@@ -7,9 +7,9 @@ import { fetchAnalytics, fetchCurrentUser, fetchInspections } from "../../../lib
 import { useLiveFeed } from "../../../hooks/use-live-feed";
 
 export default function DashboardPage() {
-  const userQuery = useQuery({ queryKey: ["current-user"], queryFn: fetchCurrentUser });
-  const inspectionsQuery = useQuery({ queryKey: ["inspections"], queryFn: fetchInspections });
-  const analyticsQuery = useQuery({ queryKey: ["analytics"], queryFn: fetchAnalytics });
+  const userQuery = useQuery({ queryKey: ["current-user"], queryFn: () => fetchCurrentUser() });
+  const inspectionsQuery = useQuery({ queryKey: ["inspections"], queryFn: () => fetchInspections() });
+  const analyticsQuery = useQuery({ queryKey: ["analytics"], queryFn: () => fetchAnalytics() });
 
   useLiveFeed(userQuery.data?.orgId);
 
@@ -89,4 +89,3 @@ export default function DashboardPage() {
     </DashboardShell>
   );
 }
-

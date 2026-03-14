@@ -24,8 +24,6 @@ export function NewInspectionWizard({
     durationMs,
     startRecording,
     stopRecording,
-    streamWords,
-    setTranscript,
   } = useVoiceStream();
 
   const pickPhoto = async () => {
@@ -193,22 +191,17 @@ export function NewInspectionWizard({
         </Pressable>
       )}
 
-      <Text style={{ color: "#8a7e69", fontSize: 11, textAlign: "center" }}>— or type to simulate —</Text>
+      <Text style={{ color: "#8a7e69", fontSize: 11, textAlign: "center" }}>
+        {connected ? "Streaming audio to Nova Sonic..." : "You can also edit the saved transcript manually."}
+      </Text>
       <TextInput
         multiline
-        value={draft.simulatedVoiceInput}
-        onChangeText={(simulatedVoiceInput) => onChange({ simulatedVoiceInput })}
-        placeholder="Describe site conditions (text demo fallback)"
+        value={draft.voiceTranscript}
+        onChangeText={(voiceTranscript) => onChange({ voiceTranscript })}
+        placeholder="Captured transcript will appear here."
         placeholderTextColor="#8a7e69"
         style={[inputStyle, { minHeight: 80 }]}
       />
-      <Pressable
-        onPress={() => streamWords(`voice-${Date.now()}`, draft.simulatedVoiceInput)}
-        style={secondaryButtonStyle}
-        disabled={connected}
-      >
-        <Text style={secondaryButtonTextStyle}>{connected ? "Streaming…" : "Stream demo transcript"}</Text>
-      </Pressable>
     </View>,
 
     // ── Step 4: Text notes ──
