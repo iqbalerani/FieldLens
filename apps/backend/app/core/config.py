@@ -7,6 +7,14 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _find_env_file() -> str | None:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / ".env"
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
 def _normalize_database_url(url: str) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in {"postgres", "postgresql", "postgresql+asyncpg"}:
@@ -23,7 +31,7 @@ def _normalize_database_url(url: str) -> str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).resolve().parents[4] / ".env"),
+        env_file=_find_env_file(),
         env_file_encoding="utf-8",
         extra="ignore",
     )
