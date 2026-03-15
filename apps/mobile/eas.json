@@ -9,7 +9,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://replace-with-your-api.railway.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://backend-production-ac05.up.railway.app"
       }
     },
     "production": {
@@ -17,7 +17,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://replace-with-your-api.railway.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://backend-production-ac05.up.railway.app"
       }
     }
   },

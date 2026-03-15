@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace @fieldlens/web",
-    "dev:mobile": "npm run start --workspace @fieldlens/mobile",
+    "dev:mobile": "npm run start:lan --workspace @fieldlens/mobile -- --clear",
+    "dev:mobile:tunnel": "npm run start:tunnel --workspace @fieldlens/mobile -- --clear",
     "build:web": "npm run build --workspace @fieldlens/web",
     "lint:web": "npm run lint --workspace @fieldlens/web",
     "typecheck": "npm run typecheck --workspace @fieldlens/web && npm run typecheck --workspace @fieldlens/shared",
