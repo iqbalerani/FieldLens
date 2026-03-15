@@ -1,6 +1,9 @@
 import type { InspectionSummary } from "@fieldlens/shared";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "../../components/Screen";
 import { StatusChip } from "../../components/StatusChip";
+import { ActionButton, BodyText, Card, PressableCard, SectionLabel, TitleBlock } from "../../components/ui";
+import { theme } from "../../theme";
 
 export function HomeScreen({
   inspections,
@@ -14,79 +17,105 @@ export function HomeScreen({
   onOpenInspection: (id: string) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={{ gap: 16 }}>
-      <View style={{ gap: 10 }}>
-        <Text style={{ color: "#ffcf88", textTransform: "uppercase", letterSpacing: 2.5 }}>Field operations</Text>
-        <Text style={{ color: "#f7f0df", fontSize: 32, fontWeight: "700" }}>Capture quickly. Report clearly.</Text>
-        <Text style={{ color: "#cdbfa5", lineHeight: 22 }}>
-          Start a new inspection, monitor processing, or review recently generated findings.
-        </Text>
-      </View>
+    <Screen>
+      <TitleBlock
+        eyebrow="Field operations"
+        title="Capture quickly. Report clearly."
+        description="Start a new inspection, monitor uploads, and reopen recent findings from a layout that stays readable on real devices."
+        hero
+      />
 
       {pendingCount > 0 && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            padding: 14,
-            borderRadius: 16,
-            backgroundColor: "rgba(240,135,0,0.12)",
-            borderWidth: 1,
-            borderColor: "rgba(240,135,0,0.35)",
-          }}
-        >
-          <Text style={{ fontSize: 18 }}>📡</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: "#ffcf88", fontWeight: "700" }}>
+        <Card tone="accent" style={styles.syncBanner}>
+          <Text style={styles.bannerIcon}>📡</Text>
+          <View style={styles.syncCopy}>
+            <Text style={styles.bannerTitle}>
               {pendingCount} inspection{pendingCount !== 1 ? "s" : ""} pending sync
             </Text>
-            <Text style={{ color: "#cdbfa5", fontSize: 12, marginTop: 2 }}>
+            <BodyText tone="secondary" style={styles.bannerText}>
               Will upload automatically when connection is restored.
-            </Text>
+            </BodyText>
           </View>
-        </View>
+        </Card>
       )}
 
-      <Pressable
-        onPress={onNewInspection}
-        style={{
-          backgroundColor: "#f08700",
-          padding: 18,
-          borderRadius: 22,
-        }}
-      >
-        <Text style={{ color: "#28180a", fontWeight: "800", fontSize: 16 }}>New inspection</Text>
-      </Pressable>
+      <ActionButton onPress={onNewInspection} style={styles.primaryCta}>
+        New inspection
+      </ActionButton>
 
-      <View style={{ gap: 12 }}>
-        {inspections.map((inspection) => (
-          <Pressable
-            key={inspection.id}
-            onPress={() => onOpenInspection(inspection.id)}
-            style={{
-              padding: 18,
-              borderRadius: 20,
-              backgroundColor: "rgba(248,242,230,0.06)",
-              borderWidth: 1,
-              borderColor: "rgba(248,242,230,0.12)",
-              gap: 10,
-            }}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View>
-                <Text style={{ color: "#cdbfa5", fontSize: 12 }}>{inspection.inspectionType}</Text>
-                <Text style={{ color: "#f7f0df", fontWeight: "700", fontSize: 18 }}>{inspection.siteName}</Text>
+      <View style={styles.list}>
+        {inspections.length === 0 ? (
+          <Card tone="strong">
+            <SectionLabel>No inspections yet</SectionLabel>
+            <BodyText tone="secondary">
+              Create your first inspection to start building a searchable field record.
+            </BodyText>
+          </Card>
+        ) : (
+          inspections.map((inspection) => (
+            <PressableCard
+              key={inspection.id}
+              onPress={() => onOpenInspection(inspection.id)}
+              tone="strong"
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.cardCopy}>
+                  <SectionLabel>{inspection.inspectionType}</SectionLabel>
+                  <Text style={styles.siteName}>{inspection.siteName}</Text>
+                </View>
+                <StatusChip label={inspection.overallStatus ?? inspection.status} />
               </View>
-              <StatusChip label={inspection.overallStatus ?? inspection.status} />
-            </View>
-            <Text style={{ color: "#cdbfa5" }}>
-              {inspection.summary ?? "Awaiting report generation. Submission is still moving through the pipeline."}
-            </Text>
-          </Pressable>
-        ))}
+              <BodyText tone="secondary">
+                {inspection.summary ??
+                  "Awaiting report generation. Submission is still moving through the pipeline."}
+              </BodyText>
+            </PressableCard>
+          ))
+        )}
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
+const styles = StyleSheet.create({
+  syncBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  bannerIcon: {
+    fontSize: 20,
+  },
+  syncCopy: {
+    flex: 1,
+    gap: theme.spacing.xxxs,
+  },
+  bannerTitle: {
+    color: theme.colors.accentStrong,
+    ...theme.typography.label,
+  },
+  bannerText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  primaryCta: {
+    minHeight: 60,
+  },
+  list: {
+    gap: theme.spacing.sm,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+  },
+  cardCopy: {
+    flex: 1,
+    gap: theme.spacing.xxs,
+  },
+  siteName: {
+    color: theme.colors.textPrimary,
+    ...theme.typography.sectionTitle,
+  },
+});

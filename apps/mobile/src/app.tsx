@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { Text } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { api } from "./api/client";
 import { LoginScreen } from "./screens/auth/LoginScreen";
@@ -16,6 +17,7 @@ import { SettingsScreen } from "./screens/settings/SettingsScreen";
 import { useAppStore } from "./store/appStore";
 import { useOfflineQueue } from "./hooks/useOfflineQueue";
 import { useSubmitInspection } from "./hooks/useSubmitInspection";
+import { theme } from "./theme";
 
 // ─── Navigation type definitions ────────────────────────────────────────────
 
@@ -158,14 +160,32 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#100d0b",
-          borderTopColor: "rgba(248,242,230,0.12)",
+          backgroundColor: theme.colors.chrome,
+          borderTopColor: theme.colors.borderSoft,
+          borderTopWidth: 1,
+          height: theme.layout.tabBarHeight,
+          paddingTop: theme.spacing.xs,
+          paddingBottom: theme.spacing.xs,
         },
-        tabBarActiveTintColor: "#f08700",
-        tabBarInactiveTintColor: "#cdbfa5",
+        tabBarItemStyle: {
+          paddingVertical: theme.spacing.xxxs,
+        },
+        tabBarActiveTintColor: theme.colors.accentStrong,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "700",
+          letterSpacing: 0.3,
+        },
         tabBarLabel: route.name,
         tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.6 }}>
+          <Text
+            style={{
+              fontSize: 20,
+              color: focused ? theme.colors.accentStrong : theme.colors.textMuted,
+              opacity: focused ? 1 : 0.72,
+            }}
+          >
             {TAB_ICONS[route.name] ?? "●"}
           </Text>
         ),
@@ -202,35 +222,40 @@ export function MobileApp() {
   };
 
   return (
-    <NavigationContainer>
-      <RootStack.Navigator
-        screenOptions={{
-          contentStyle: { backgroundColor: "#14110f" },
-          headerStyle: { backgroundColor: "#100d0b" },
-          headerTintColor: "#f7f0df",
-          headerTitleStyle: { fontWeight: "700" },
-        }}
-      >
-        {!token ? (
-          <RootStack.Screen name="Login" options={{ headerShown: false }}>
-            {() => <LoginScreen onSubmit={handleLogin} />}
-          </RootStack.Screen>
-        ) : (
-          <>
-            <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-            <RootStack.Screen
-              name="InspectionDetail"
-              component={InspectionDetailRoute}
-              options={{ title: "Inspection Detail" }}
-            />
-            <RootStack.Screen
-              name="SubmissionStatus"
-              component={SubmissionStatusRoute}
-              options={{ title: "Submission Status" }}
-            />
-          </>
-        )}
-      </RootStack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <RootStack.Navigator
+          screenOptions={{
+            contentStyle: { backgroundColor: theme.colors.background },
+            headerStyle: { backgroundColor: theme.colors.chrome },
+            headerTintColor: theme.colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: "800",
+              fontSize: 18,
+            },
+          }}
+        >
+          {!token ? (
+            <RootStack.Screen name="Login" options={{ headerShown: false }}>
+              {() => <LoginScreen onSubmit={handleLogin} />}
+            </RootStack.Screen>
+          ) : (
+            <>
+              <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+              <RootStack.Screen
+                name="InspectionDetail"
+                component={InspectionDetailRoute}
+                options={{ title: "Inspection Detail" }}
+              />
+              <RootStack.Screen
+                name="SubmissionStatus"
+                component={SubmissionStatusRoute}
+                options={{ title: "Submission Status" }}
+              />
+            </>
+          )}
+        </RootStack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }

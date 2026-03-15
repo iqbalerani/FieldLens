@@ -1,4 +1,7 @@
-import { Pressable, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
+import { Screen } from "../../components/Screen";
+import { ActionButton, BodyText, Card, TitleBlock } from "../../components/ui";
+import { theme } from "../../theme";
 
 export function SettingsScreen({
   onResetDraft,
@@ -8,31 +11,28 @@ export function SettingsScreen({
   onLogout: () => void;
 }) {
   return (
-    <View style={{ gap: 14 }}>
-      <Text style={{ color: "#f7f0df", fontSize: 28, fontWeight: "700" }}>Settings</Text>
-      <Text style={{ color: "#cdbfa5", lineHeight: 22 }}>
-        The MVP stores your current draft locally so inspection work survives restarts.
-      </Text>
-      <Pressable
-        onPress={onResetDraft}
-        style={{
-          padding: 16,
-          borderRadius: 18,
-          backgroundColor: "rgba(248,242,230,0.08)",
-        }}
-      >
-        <Text style={{ color: "#f7f0df", fontWeight: "700" }}>Reset local draft</Text>
-      </Pressable>
-      <Pressable
-        onPress={onLogout}
-        style={{
-          padding: 16,
-          borderRadius: 18,
-          backgroundColor: "rgba(255,107,107,0.14)",
-        }}
-      >
-        <Text style={{ color: "#ffb4a8", fontWeight: "700" }}>Sign out</Text>
-      </Pressable>
-    </View>
+    <Screen scroll={false}>
+      <TitleBlock
+        title="Settings"
+        description="Your current draft stays on-device so active inspection work survives restarts and poor connectivity."
+      />
+      <Card tone="strong" style={styles.actionsCard}>
+        <BodyText tone="secondary">
+          Use these controls to clear the local draft or end the current session on this device.
+        </BodyText>
+        <ActionButton onPress={onResetDraft} variant="secondary">
+          Reset local draft
+        </ActionButton>
+        <ActionButton onPress={onLogout} variant="danger">
+          Sign out
+        </ActionButton>
+      </Card>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  actionsCard: {
+    gap: theme.spacing.md,
+  },
+});

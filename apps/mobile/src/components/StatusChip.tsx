@@ -1,30 +1,37 @@
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { getStatusTone, theme } from "../theme";
 
 export function StatusChip({ label }: { label: string }) {
   const normalized = label.toUpperCase();
-  const backgroundColor =
-    normalized === "FAIL" || normalized === "CRITICAL"
-      ? "rgba(239, 106, 91, 0.15)"
-      : normalized === "WARN" || normalized === "WARNING" || normalized === "PROCESSING"
-        ? "rgba(246, 178, 75, 0.15)"
-        : "rgba(125, 207, 155, 0.15)";
-  const color =
-    normalized === "FAIL" || normalized === "CRITICAL"
-      ? "#ef6a5b"
-      : normalized === "WARN" || normalized === "WARNING" || normalized === "PROCESSING"
-        ? "#f6b24b"
-        : "#7dcf9b";
+  const tone = getStatusTone(normalized);
+
   return (
     <View
-      style={{
-        backgroundColor,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 999,
-      }}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: tone.backgroundColor,
+          borderColor: tone.borderColor,
+        },
+      ]}
     >
-      <Text style={{ color, fontSize: 12, fontWeight: "700" }}>{normalized}</Text>
+      <Text style={[styles.label, { color: tone.textColor }]}>{normalized}</Text>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  chip: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    color: theme.colors.textPrimary,
+    ...theme.typography.caption,
+  },
+});

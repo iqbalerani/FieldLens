@@ -1,6 +1,9 @@
 import type { InspectionSummary } from "@fieldlens/shared";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "../../components/Screen";
 import { StatusChip } from "../../components/StatusChip";
+import { BodyText, Card, PressableCard, SectionLabel, TitleBlock } from "../../components/ui";
+import { theme } from "../../theme";
 
 export function HistoryScreen({
   inspections,
@@ -10,26 +13,46 @@ export function HistoryScreen({
   onOpenInspection: (id: string) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={{ gap: 12 }}>
-      <Text style={{ color: "#f7f0df", fontSize: 28, fontWeight: "700" }}>History</Text>
-      {inspections.map((inspection) => (
-        <Pressable key={inspection.id} onPress={() => onOpenInspection(inspection.id)} style={cardStyle}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: "#f7f0df", fontWeight: "700", fontSize: 16 }}>{inspection.siteName}</Text>
-            <StatusChip label={inspection.overallStatus ?? inspection.status} />
-          </View>
-          <Text style={{ color: "#cdbfa5", marginTop: 8 }}>{inspection.summary ?? "Awaiting report."}</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+    <Screen>
+      <TitleBlock
+        title="History"
+        description="Review recently submitted inspections and reopen reports without hunting through washed-out lists."
+      />
+      <View style={styles.list}>
+        {inspections.length === 0 ? (
+          <Card tone="strong">
+            <SectionLabel>No inspections yet</SectionLabel>
+            <BodyText tone="secondary">Submitted inspections will appear here once you start capturing work.</BodyText>
+          </Card>
+        ) : (
+          inspections.map((inspection) => (
+            <PressableCard key={inspection.id} onPress={() => onOpenInspection(inspection.id)} tone="strong">
+              <View style={styles.cardHeader}>
+                <Text style={styles.siteName}>{inspection.siteName}</Text>
+                <StatusChip label={inspection.overallStatus ?? inspection.status} />
+              </View>
+              <BodyText tone="secondary">{inspection.summary ?? "Awaiting report."}</BodyText>
+            </PressableCard>
+          ))
+        )}
+      </View>
+    </Screen>
   );
 }
 
-const cardStyle = {
-  padding: 18,
-  borderRadius: 18,
-  backgroundColor: "rgba(248,242,230,0.05)",
-  borderWidth: 1,
-  borderColor: "rgba(248,242,230,0.12)",
-} as const;
-
+const styles = StyleSheet.create({
+  list: {
+    gap: theme.spacing.sm,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+  },
+  siteName: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    ...theme.typography.sectionTitle,
+  },
+});

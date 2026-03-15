@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Screen } from "../../components/Screen";
+import { ActionButton, BodyText, Card, FieldInput, TitleBlock } from "../../components/ui";
+import { theme } from "../../theme";
 
 export function LoginScreen({
   onSubmit,
@@ -24,57 +27,54 @@ export function LoginScreen({
   };
 
   return (
-    <View style={{ gap: 14 }}>
-      <Text style={{ color: "#f7f0df", fontSize: 38, fontWeight: "700" }}>FieldLens</Text>
-      <Text style={{ color: "#cdbfa5", lineHeight: 22 }}>
-        Sign in with your FieldLens credentials to capture inspections, upload media, and generate live Nova reports.
-      </Text>
-      <View style={{ gap: 10 }}>
-        <TextInput
+    <Screen contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <TitleBlock
+        eyebrow="Secure mobile access"
+        title="FieldLens"
+        description="Sign in to capture inspections, attach evidence, and send live site reports without sacrificing readability in the field."
+        hero
+      />
+      <Card tone="strong" style={styles.formCard}>
+        <View style={styles.formFields}>
+          <FieldInput
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="Email"
-          placeholderTextColor="#8a7e69"
           value={email}
           onChangeText={setEmail}
-          style={{
-            padding: 16,
-            borderRadius: 18,
-            color: "#f7f0df",
-            backgroundColor: "rgba(248,242,230,0.08)",
-            borderWidth: 1,
-            borderColor: "rgba(248,242,230,0.14)",
-          }}
         />
-        <TextInput
+          <FieldInput
           secureTextEntry
           placeholder="Password"
-          placeholderTextColor="#8a7e69"
           value={password}
           onChangeText={setPassword}
-          style={{
-            padding: 16,
-            borderRadius: 18,
-            color: "#f7f0df",
-            backgroundColor: "rgba(248,242,230,0.08)",
-            borderWidth: 1,
-            borderColor: "rgba(248,242,230,0.14)",
-          }}
         />
-      </View>
-      {error ? <Text style={{ color: "#ff9d7a" }}>{error}</Text> : null}
-      <Pressable
-        onPress={() => void handleSubmit()}
-        style={{
-          padding: 16,
-          borderRadius: 18,
-          backgroundColor: "#f08700",
-          borderWidth: 1,
-          borderColor: "rgba(248,242,230,0.14)",
-        }}
-      >
-        <Text style={{ color: "#211408", fontWeight: "700" }}>{submitting ? "Signing in..." : "Continue"}</Text>
-      </Pressable>
-    </View>
+        </View>
+        {error ? (
+          <BodyText tone="primary" style={styles.errorText}>
+            {error}
+          </BodyText>
+        ) : null}
+        <ActionButton onPress={() => void handleSubmit()}>
+          {submitting ? "Signing in..." : "Continue"}
+        </ActionButton>
+      </Card>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    justifyContent: "center",
+    gap: theme.spacing.xl,
+  },
+  formCard: {
+    gap: theme.spacing.md,
+  },
+  formFields: {
+    gap: theme.spacing.sm,
+  },
+  errorText: {
+    color: theme.colors.destructive,
+  },
+});

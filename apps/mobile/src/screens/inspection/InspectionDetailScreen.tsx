@@ -1,54 +1,73 @@
 import type { InspectionDetail } from "@fieldlens/shared";
-import { ScrollView, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "../../components/Screen";
 import { StatusChip } from "../../components/StatusChip";
+import { BodyText, Card, SectionLabel, TitleBlock } from "../../components/ui";
+import { theme } from "../../theme";
 
 export function InspectionDetailScreen({ inspection }: { inspection: InspectionDetail | null }) {
   if (!inspection) {
-    return <Text style={{ color: "#cdbfa5" }}>Loading inspection detail...</Text>;
+    return (
+      <Screen>
+        <TitleBlock title="Inspection detail" description="Loading the latest captured evidence and generated report." />
+        <Card tone="strong">
+          <BodyText tone="secondary">Loading inspection detail...</BodyText>
+        </Card>
+      </Screen>
+    );
   }
 
   return (
-    <ScrollView contentContainerStyle={{ gap: 16 }}>
-      <Text style={{ color: "#f7f0df", fontSize: 28, fontWeight: "700" }}>{inspection.siteName}</Text>
+    <Screen>
+      <TitleBlock title={inspection.siteName} description="Inspection detail" />
       <StatusChip label={inspection.report?.overallStatus ?? inspection.status} />
-      <View style={cardStyle}>
-        <Text style={labelStyle}>Summary</Text>
-        <Text style={valueStyle}>{inspection.report?.summary ?? inspection.summary}</Text>
-      </View>
-      <View style={cardStyle}>
-        <Text style={labelStyle}>Transcript</Text>
-        <Text style={valueStyle}>{inspection.voiceTranscript ?? "No transcript available."}</Text>
-      </View>
-      <View style={cardStyle}>
-        <Text style={labelStyle}>Issues</Text>
-        <View style={{ gap: 10, marginTop: 10 }}>
+      <Card tone="strong">
+        <SectionLabel>Summary</SectionLabel>
+        <BodyText tone="primary">{inspection.report?.summary ?? inspection.summary}</BodyText>
+      </Card>
+      <Card tone="strong">
+        <SectionLabel>Transcript</SectionLabel>
+        <BodyText tone="primary">{inspection.voiceTranscript ?? "No transcript available."}</BodyText>
+      </Card>
+      <Card tone="strong">
+        <SectionLabel>Issues</SectionLabel>
+        <View style={styles.issueList}>
           {inspection.report?.issues.map((issue) => (
-            <View key={`${issue.title}-${issue.affectedArea}`} style={issueCardStyle}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: "#f7f0df", fontWeight: "700" }}>{issue.title}</Text>
+            <View key={`${issue.title}-${issue.affectedArea}`} style={styles.issueCard}>
+              <View style={styles.issueHeader}>
+                <Text style={styles.issueTitle}>{issue.title}</Text>
                 <StatusChip label={issue.severity} />
               </View>
-              <Text style={{ color: "#cdbfa5", marginTop: 8 }}>{issue.description}</Text>
+              <BodyText tone="secondary">{issue.description}</BodyText>
             </View>
-          )) ?? <Text style={valueStyle}>No issues extracted yet.</Text>}
+          )) ?? <BodyText tone="secondary">No issues extracted yet.</BodyText>}
         </View>
-      </View>
-    </ScrollView>
+      </Card>
+    </Screen>
   );
 }
 
-const cardStyle = {
-  padding: 18,
-  borderRadius: 18,
-  backgroundColor: "rgba(248,242,230,0.05)",
-  borderWidth: 1,
-  borderColor: "rgba(248,242,230,0.12)",
-} as const;
-const issueCardStyle = {
-  padding: 14,
-  borderRadius: 16,
-  backgroundColor: "rgba(248,242,230,0.04)",
-} as const;
-const labelStyle = { color: "#ffcf88", marginBottom: 8 } as const;
-const valueStyle = { color: "#f7f0df", lineHeight: 22 } as const;
-
+const styles = StyleSheet.create({
+  issueList: {
+    gap: theme.spacing.sm,
+  },
+  issueCard: {
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.backgroundInset,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSoft,
+  },
+  issueHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+  },
+  issueTitle: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    ...theme.typography.label,
+  },
+});
