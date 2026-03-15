@@ -318,9 +318,10 @@ class AIService:
         raw = "".join(text_chunks).strip()
         cleaned = self._clean_json_payload(raw)
         try:
-            return json.loads(cleaned)
+            parsed = json.loads(cleaned)
         except json.JSONDecodeError as exc:
             raise AIServiceError(f"Nova Lite returned invalid JSON: {raw}") from exc
+        return self._normalize_report_keys(parsed)
 
     def _clean_json_payload(self, raw: str) -> str:
         cleaned = raw.strip()
@@ -330,6 +331,21 @@ class AIService:
 
         match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         return match.group(0) if match else cleaned
+
+    def _normalize_report_keys(self, report: dict[str, Any]) -> dict[str, Any]:
+        """Normalize Nova Lite output to always use snake_case keys regardless of what the model returned."""
+        def _snake(k: str) -> str:
+            import re as _re
+            return _re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
+
+        top = {_snake(k): v for k, v in report.items()}
+
+        issues = []
+        for issue in top.get("issues", []):
+            issues.append({_snake(k): v for k, v in issue.items()})
+        if issues:
+            top["issues"] = issues
+        return top
 
 
 ai_service = AIService()

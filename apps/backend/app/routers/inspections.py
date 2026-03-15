@@ -52,6 +52,14 @@ def serialize_summary(inspection: Inspection) -> InspectionSummaryResponse:
     )
 
 
+def _get(d: dict, *keys: str, default=None):
+    """Return first matching key from a dict — supports both snake_case and camelCase variants."""
+    for key in keys:
+        if key in d:
+            return d[key]
+    return default
+
+
 def serialize_detail(inspection: Inspection) -> InspectionDetailResponse:
     media = [
         MediaUploadTarget(
@@ -74,24 +82,24 @@ def serialize_detail(inspection: Inspection) -> InspectionDetailResponse:
         voiceTranscript=inspection.transcript.transcript_text if inspection.transcript else None,
         media=media,
         report={
-            "summary": report["summary"],
-            "overallStatus": report["overall_status"],
-            "confidenceScore": report["confidence_score"],
+            "summary": _get(report, "summary", default=""),
+            "overallStatus": _get(report, "overall_status", "overallStatus", default="UNKNOWN"),
+            "confidenceScore": _get(report, "confidence_score", "confidenceScore", default=0.0),
             "issues": [
                 {
                     "id": issue.get("id"),
-                    "title": issue["title"],
-                    "description": issue["description"],
-                    "severity": issue["severity"],
-                    "affectedArea": issue["affected_area"],
-                    "suggestedAction": issue["suggested_action"],
-                    "photoReferenceIndex": issue.get("photo_reference_index"),
+                    "title": _get(issue, "title", default=""),
+                    "description": _get(issue, "description", default=""),
+                    "severity": _get(issue, "severity", default="INFO"),
+                    "affectedArea": _get(issue, "affected_area", "affectedArea", default=""),
+                    "suggestedAction": _get(issue, "suggested_action", "suggestedAction", default=""),
+                    "photoReferenceIndex": _get(issue, "photo_reference_index", "photoReferenceIndex"),
                 }
-                for issue in report.get("issues", [])
+                for issue in _get(report, "issues", default=[])
             ],
-            "recommendations": report.get("recommendations", []),
-            "missingInfo": report.get("missing_info", []),
-            "comparisonWithPrior": report.get("comparison_with_prior", ""),
+            "recommendations": _get(report, "recommendations", default=[]),
+            "missingInfo": _get(report, "missing_info", "missingInfo", default=[]),
+            "comparisonWithPrior": _get(report, "comparison_with_prior", "comparisonWithPrior", default=""),
         }
         if report
         else None,
