@@ -210,13 +210,17 @@ async def process_inspection(session: AsyncSession, inspection: Inspection) -> I
         preprocessed_images=preprocessed_images,
     )
     inspection.report = report
-    inspection.embedding = ai_service.build_inspection_embedding(
-        site_name=inspection.site_name,
-        transcript=transcript,
-        text_notes=inspection.text_notes or "",
-        report_summary=report.get("summary", ""),
-        preprocessed_images=preprocessed_images,
-    )
+    try:
+        inspection.embedding = ai_service.build_inspection_embedding(
+            site_name=inspection.site_name,
+            transcript=transcript,
+            text_notes=inspection.text_notes or "",
+            report_summary=report.get("summary", ""),
+            preprocessed_images=preprocessed_images,
+        )
+    except Exception as exc:
+        logger.warning("Embedding generation failed, using zero vector: %s", exc)
+        inspection.embedding = ai_service._zero_embedding()
 
     for existing_issue in list(inspection.issues):
         await session.delete(existing_issue)
@@ -224,11 +228,11 @@ async def process_inspection(session: AsyncSession, inspection: Inspection) -> I
         session.add(
             InspectionIssue(
                 inspection_id=inspection.id,
-                title=issue["title"],
-                severity=issue["severity"],
-                description=issue["description"],
-                affected_area=issue["affected_area"],
-                suggested_action=issue["suggested_action"],
+                title=issue.get("title") or "Issue detected",
+                severity=issue.get("severity", "INFO"),
+                description=issue.get("description", ""),
+                affected_area=issue.get("affected_area", ""),
+                suggested_action=issue.get("suggested_action", ""),
                 photo_reference_index=issue.get("photo_reference_index"),
             )
         )
