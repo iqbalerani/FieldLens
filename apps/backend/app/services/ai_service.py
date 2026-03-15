@@ -333,18 +333,36 @@ class AIService:
         return match.group(0) if match else cleaned
 
     def _normalize_report_keys(self, report: dict[str, Any]) -> dict[str, Any]:
-        """Normalize Nova Lite output to always use snake_case keys regardless of what the model returned."""
+        """Normalize Nova Lite output to always use snake_case keys and conformant values."""
         def _snake(k: str) -> str:
             import re as _re
             return _re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower()
 
         top = {_snake(k): v for k, v in report.items()}
 
+        # Normalize severity at top level if present
+        if "overall_status" in top:
+            top["overall_status"] = str(top["overall_status"]).upper() if top["overall_status"] else "UNKNOWN"
+
         issues = []
-        for issue in top.get("issues", []):
-            issues.append({_snake(k): v for k, v in issue.items()})
-        if issues:
-            top["issues"] = issues
+        for raw_issue in top.get("issues", []):
+            issue = {_snake(k): v for k, v in raw_issue.items()}
+            # Map alternate field names to canonical snake_case names
+            if "affected_area" not in issue:
+                issue["affected_area"] = issue.pop("location", issue.pop("area", issue.pop("affected_area", "")))
+            if "suggested_action" not in issue:
+                issue["suggested_action"] = issue.pop(
+                    "detection_method", issue.pop("action", issue.pop("recommendation", ""))
+                )
+            if "title" not in issue:
+                desc = issue.get("description", "")
+                issue["title"] = (desc[:80] + "...") if len(desc) > 80 else desc or "Issue detected"
+            # Normalise severity to uppercase enum value
+            raw_sev = str(issue.get("severity", "INFO")).upper()
+            issue["severity"] = raw_sev if raw_sev in {"CRITICAL", "WARNING", "INFO"} else "INFO"
+            issues.append(issue)
+
+        top["issues"] = issues
         return top
 
 

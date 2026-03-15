@@ -60,6 +60,56 @@ def _get(d: dict, *keys: str, default=None):
     return default
 
 
+def _normalise_severity(raw: object) -> str:
+    """Map any severity value to a valid IssueSeverity string."""
+    val = str(raw).upper() if raw else "INFO"
+    return val if val in {"CRITICAL", "WARNING", "INFO"} else "INFO"
+
+
+def _build_report_response(report: dict) -> dict:
+    """Convert a raw DB/Nova report dict to the camelCase response shape FastAPI expects.
+
+    Handles both snake_case and camelCase source keys, missing fields,
+    and non-standard issue structures returned by the model.
+    """
+    raw_issues = _get(report, "issues", default=[]) or []
+    issues = []
+    for issue in raw_issues:
+        # Resolve affected area from multiple possible key names
+        area = _get(issue, "affected_area", "affectedArea", "location", "area", default="")
+        # Resolve suggested action from multiple possible key names
+        action = _get(
+            issue,
+            "suggested_action", "suggestedAction",
+            "detection_method", "action", "recommendation",
+            default="",
+        )
+        # Derive a title when missing
+        desc = _get(issue, "description", default="")
+        title = _get(issue, "title", default=None) or (
+            (desc[:77] + "...") if len(str(desc)) > 80 else desc or "Issue detected"
+        )
+        issues.append({
+            "id": issue.get("id"),
+            "title": title,
+            "description": desc,
+            "severity": _normalise_severity(_get(issue, "severity")),
+            "affectedArea": area,
+            "suggestedAction": action,
+            "photoReferenceIndex": _get(issue, "photo_reference_index", "photoReferenceIndex"),
+        })
+
+    return {
+        "summary": _get(report, "summary", default=""),
+        "overallStatus": str(_get(report, "overall_status", "overallStatus", default="UNKNOWN")).upper(),
+        "confidenceScore": float(_get(report, "confidence_score", "confidenceScore", default=0.0) or 0.0),
+        "issues": issues,
+        "recommendations": _get(report, "recommendations", default=[]) or [],
+        "missingInfo": _get(report, "missing_info", "missingInfo", default=[]) or [],
+        "comparisonWithPrior": _get(report, "comparison_with_prior", "comparisonWithPrior", default="") or "",
+    }
+
+
 def serialize_detail(inspection: Inspection) -> InspectionDetailResponse:
     media = [
         MediaUploadTarget(
@@ -81,28 +131,7 @@ def serialize_detail(inspection: Inspection) -> InspectionDetailResponse:
         textNotes=inspection.text_notes,
         voiceTranscript=inspection.transcript.transcript_text if inspection.transcript else None,
         media=media,
-        report={
-            "summary": _get(report, "summary", default=""),
-            "overallStatus": _get(report, "overall_status", "overallStatus", default="UNKNOWN"),
-            "confidenceScore": _get(report, "confidence_score", "confidenceScore", default=0.0),
-            "issues": [
-                {
-                    "id": issue.get("id"),
-                    "title": _get(issue, "title", default=""),
-                    "description": _get(issue, "description", default=""),
-                    "severity": _get(issue, "severity", default="INFO"),
-                    "affectedArea": _get(issue, "affected_area", "affectedArea", default=""),
-                    "suggestedAction": _get(issue, "suggested_action", "suggestedAction", default=""),
-                    "photoReferenceIndex": _get(issue, "photo_reference_index", "photoReferenceIndex"),
-                }
-                for issue in _get(report, "issues", default=[])
-            ],
-            "recommendations": _get(report, "recommendations", default=[]),
-            "missingInfo": _get(report, "missing_info", "missingInfo", default=[]),
-            "comparisonWithPrior": _get(report, "comparison_with_prior", "comparisonWithPrior", default=""),
-        }
-        if report
-        else None,
+        report=_build_report_response(report) if report else None,
     )
 
 
