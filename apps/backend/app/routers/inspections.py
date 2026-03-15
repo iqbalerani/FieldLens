@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger(__name__)
 
 from app.core.database import SessionLocal, get_db
 from app.core.events import broker
@@ -130,6 +133,7 @@ async def process_in_background(inspection_id: str) -> None:
         try:
             await process_inspection(session, inspection)
         except Exception:
+            logger.exception("Inspection processing failed for inspection_id=%s", inspection_id)
             inspection.status = InspectionStatus.FAILED
             await broker.publish(inspection.org_id, {"type": "processing_failed", "inspectionId": inspection.id})
         await session.commit()

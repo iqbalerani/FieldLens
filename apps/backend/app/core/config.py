@@ -49,8 +49,8 @@ class Settings(BaseSettings):
 
     aws_region: str = "us-east-1"
     nova_lite_model_id: str = "us.amazon.nova-2-lite-v1:0"
-    nova_sonic_model_id: str = "amazon.nova-2-sonic-v1:0"
-    nova_embed_model_id: str = "amazon.nova-2-multimodal-embeddings-v1:0"
+    nova_sonic_model_id: str = "us.amazon.nova-2-sonic-v1:0"
+    nova_embed_model_id: str = "us.amazon.nova-2-multimodal-embeddings-v1:0"
     nova_embed_dimensions: int = 1024
     nova_embed_document_task_type: str = "SEARCH_DOCUMENT"
     nova_embed_query_task_type: str = "SEARCH_QUERY"

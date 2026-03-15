@@ -266,11 +266,17 @@ async def trend_points(session: AsyncSession, org_id: str) -> list[dict[str, Any
 
 
 async def log_search(session: AsyncSession, user_id: str, query_text: str, result_count: int) -> None:
+    from app.services.ai_service import AIServiceError
+    try:
+        embedding = ai_service.embed_text(query_text, query=True)
+    except AIServiceError as exc:
+        logger.warning("Embedding unavailable for search log, using zero vector: %s", exc)
+        embedding = ai_service._zero_embedding()
     session.add(
         SearchQuery(
             user_id=user_id,
             query_text=query_text,
-            query_embedding=ai_service.embed_text(query_text, query=True),
+            query_embedding=embedding,
             result_count=result_count,
         )
     )

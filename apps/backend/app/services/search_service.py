@@ -1,3 +1,4 @@
+import logging
 import math
 
 from sqlalchemy import select
@@ -5,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models import Inspection
-from app.services.ai_service import ai_service
+from app.services.ai_service import AIServiceError, ai_service
+
+logger = logging.getLogger(__name__)
 
 
 settings = get_settings()
@@ -75,7 +78,11 @@ async def find_similar_inspections(
     exclude_inspection_id: str | None = None,
     limit: int = 10,
 ) -> list[tuple[Inspection, float]]:
-    query_embedding = ai_service.embed_text(query, query=True)
+    try:
+        query_embedding = ai_service.embed_text(query, query=True)
+    except AIServiceError as exc:
+        logger.warning("Embedding unavailable for search query, returning empty results: %s", exc)
+        return []
     if settings.is_postgres:
         return await _find_with_pgvector(
             session,
