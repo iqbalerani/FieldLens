@@ -131,6 +131,7 @@ async def health() -> dict[str, object]:
     return {
         "status": status,
         "environment": settings.environment,
+        "version": "1.2.0",
         "dependencies": dependencies,
     }
 
