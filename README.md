@@ -54,6 +54,15 @@ npm run dev:mobile
 
 `npm run dev:mobile` starts Expo over LAN on port `8081`, which is the recommended path for Expo Go when your phone and computer are on the same Wi-Fi or hotspot. To point the mobile app at the deployed Railway backend instead of a local API, prefix the command with `EXPO_PUBLIC_API_BASE_URL=https://backend-production-ac05.up.railway.app`.
 
+Before starting mobile development, clear any old Expo sessions on `8081` and `8082` and run only one mode at a time:
+
+```bash
+lsof -ti :8081 -ti :8082 | xargs kill
+EXPO_PUBLIC_API_BASE_URL=https://backend-production-ac05.up.railway.app npm run dev:mobile
+```
+
+When debugging Android startup in Expo Go, verify that the opened bundle host is LAN/local and not `*.exp.direct`, which indicates the tunnel path instead of the preferred LAN path.
+
 ## Runtime modes
 
 - `AUTH_MODE=jwt` enables FastAPI-issued access tokens via `POST /auth/login`.

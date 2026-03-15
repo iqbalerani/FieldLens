@@ -6,6 +6,7 @@
 - Mac running Expo dev server
 - Phone and Mac on the same Wi-Fi network or personal hotspot
 - Backend deployed on Railway: `https://backend-production-ac05.up.railway.app`
+- Use **one Expo session at a time** for this app. Do not keep `--lan` and `--tunnel` servers running together.
 
 ## Starting the Dev Server
 
@@ -16,6 +17,7 @@ EXPO_PUBLIC_API_BASE_URL=https://backend-production-ac05.up.railway.app npx expo
 ```
 
 Open Expo Go and scan the LAN QR code shown in the terminal.
+When debugging Android startup, make sure the opened bundle host is your LAN/local server and not a `*.exp.direct` tunnel URL.
 
 From the repo root, the equivalent command is:
 
@@ -30,6 +32,7 @@ EXPO_PUBLIC_API_BASE_URL=https://backend-production-ac05.up.railway.app npx expo
 ```
 
 The Railway backend powers the API calls, but Expo Go must connect to your local Expo server for the QR code and bundle.
+If you switch between LAN and tunnel, stop both old Expo sessions first and restart with only the mode you intend to use.
 
 ---
 
@@ -175,7 +178,7 @@ GET /inspections/{id}        →  Full detail with AI report
 
 | Issue | Solution |
 |-------|----------|
-| App shows red error screen | Kill old Expo servers with `lsof -ti :8081 -ti :8082 | xargs kill`, then run `npx expo start --lan --clear --port 8081` |
+| App shows red error screen | Kill old Expo servers with `lsof -ti :8081 -ti :8082 | xargs kill`, start only `npx expo start --lan --clear --port 8081`, then reopen Expo Go from the LAN QR code |
 | "Network request failed" | Check EXPO_PUBLIC_API_BASE_URL is set correctly |
 | Camera doesn't open | Grant camera permission in phone settings |
 | Voice recording fails | Grant microphone permission in phone settings |
@@ -184,6 +187,7 @@ GET /inspections/{id}        →  Full detail with AI report
 | Login fails | Verify credentials, check backend health endpoint |
 
 If the phone cannot stay on the same network as your Mac, retry with `--tunnel`, but expect slower and less reliable startup than LAN mode.
+If Expo Go opens a bundle URL on `*.exp.direct`, you are using the tunnel path rather than the preferred LAN path.
 
 ---
 
