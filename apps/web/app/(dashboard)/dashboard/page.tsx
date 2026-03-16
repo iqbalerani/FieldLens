@@ -4,14 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardShell } from "../../../components/dashboard-shell";
 import { InspectionCard } from "../../../components/inspection-card";
 import { fetchAnalytics, fetchCurrentUser, fetchInspections } from "../../../lib/api";
-import { useLiveFeed } from "../../../hooks/use-live-feed";
 
 export default function DashboardPage() {
   const userQuery = useQuery({ queryKey: ["current-user"], queryFn: () => fetchCurrentUser() });
   const inspectionsQuery = useQuery({ queryKey: ["inspections"], queryFn: () => fetchInspections() });
   const analyticsQuery = useQuery({ queryKey: ["analytics"], queryFn: () => fetchAnalytics() });
-
-  useLiveFeed(userQuery.data?.orgId);
 
   const inspections = inspectionsQuery.data ?? [];
   const analytics = analyticsQuery.data ?? [];
@@ -68,7 +65,7 @@ export default function DashboardPage() {
           <div className="surface">
             <h2 className="panel-title">Supervisor note</h2>
             <p className="panel-copy">
-              This dashboard listens for `inspection_submitted`, `processing_started`, and `report_ready` so the feed refreshes without a page reload.
+              Dashboard views listen for `inspection_submitted`, `processing_started`, and `report_ready` so the feed and analytics refresh without a page reload.
             </p>
           </div>
           <div className="surface">

@@ -1,8 +1,12 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { useLiveFeed } from "../hooks/use-live-feed";
+import { fetchCurrentUser } from "../lib/api";
+import { getStoredToken } from "../lib/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
@@ -21,6 +25,13 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const userQuery = useQuery({
+    queryKey: ["current-user"],
+    queryFn: fetchCurrentUser,
+    enabled: Boolean(getStoredToken()),
+  });
+
+  useLiveFeed(userQuery.data?.orgId);
 
   return (
     <div className="app-shell">
