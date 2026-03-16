@@ -1,0 +1,10 @@
+{
+  "sourceFile": "Walk through Demo.mp4",
+  "trimBeforeInFrames": 0,
+  "sceneDurationInFrames": 1350,
+  "fps": 30,
+  "silenceThreshold": {
+    "peak": 500,
+    "rms": 50
+  }
+}

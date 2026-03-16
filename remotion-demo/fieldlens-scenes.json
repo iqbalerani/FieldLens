@@ -1,0 +1,61 @@
+{
+  "name": "fieldlens-demo",
+  "voice": "JBFqnCBsd6RMkjVDRZzb",
+  "character": "narrator",
+  "scenes": [
+    {
+      "id": "title",
+      "text": "FieldLens — an AI-powered field inspection platform, built on Amazon Nova and Amazon Bedrock.",
+      "duration": 5,
+      "character": "narrator"
+    },
+    {
+      "id": "problem",
+      "text": "Field inspections are broken. Inspectors spend over four hours per visit on manual documentation — paper forms, disconnected photos, and voice notes that never make it into official reports.",
+      "duration": 10,
+      "character": "dramatic"
+    },
+    {
+      "id": "solution",
+      "text": "FieldLens cuts that to under five minutes. Using Amazon Nova's multimodal reasoning, voice transcription, and semantic embeddings — raw field data becomes a structured AI-generated report, instantly.",
+      "duration": 10,
+      "character": "narrator"
+    },
+    {
+      "id": "mobile-demo",
+      "text": "The inspector opens the app and enters site details — location, client, and project ID. They capture photo evidence on-site. Nova two Lite automatically analyzes each image, tagging defects and materials in real time. Nova two Sonic transcribes their voice walkthrough — turning spoken observations into structured field notes instantly. Additional notes and annotations complete the inspection record. The inspector reviews the AI-assembled report before submitting. With one tap, the data is sent to Amazon Bedrock — Nova two Lite generates the full inspection report. The result: a complete, structured report with findings, photos, and recommendations — in seconds.",
+      "duration": 55,
+      "character": "narrator"
+    },
+    {
+      "id": "architecture",
+      "text": "Here's how FieldLens is built. The mobile app routes through a backend AI pipeline powered by Amazon Bedrock. Nova two Lite handles multimodal reasoning. Nova two Sonic transcribes voice. Nova Embeddings power semantic search. The web dashboard delivers real-time visibility — all on AWS: S3, RDS, Cognito, Lambda, and CloudFront.",
+      "duration": 40,
+      "character": "expert"
+    },
+    {
+      "id": "analytics",
+      "text": "This isn't a prototype — it's real. We ran forty-seven Nova model invocations across three model types, all through Amazon Bedrock. Every AI-generated report you'll see was produced by live Nova API calls.",
+      "duration": 25,
+      "character": "narrator"
+    },
+    {
+      "id": "web-demo",
+      "text": "The web dashboard shows a real-time inspection feed. New submissions arrive live via WebSocket with instant status updates. The inspections list is fully searchable — filter by site, status, or date range. Nova-powered analytics surfaces defect trends, inspector performance, and compliance tracking — turning field data into actionable insights.",
+      "duration": 40,
+      "character": "narrator"
+    },
+    {
+      "id": "walkthrough",
+      "text": "Let's see the full workflow in action — from opening the mobile app on site, through AI-powered report generation, to reviewing the final output on the web dashboard.",
+      "duration": 45,
+      "character": "narrator"
+    },
+    {
+      "id": "closing",
+      "text": "FieldLens. Powered by Amazon Nova. Built for the AWS Nova AI Hackathon 2025 — transforming field inspections with Nova two Lite, Nova two Sonic, and Nova Embeddings on Amazon Bedrock.",
+      "duration": 15,
+      "character": "calm"
+    }
+  ]
+}
