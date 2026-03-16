@@ -1,7 +1,7 @@
 {
   "sourceFile": "Walk through Demo.mp4",
   "trimBeforeInFrames": 0,
-  "sceneDurationInFrames": 1350,
+  "sceneDurationInFrames": 2700,
   "fps": 30,
   "silenceThreshold": {
     "peak": 500,

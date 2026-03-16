@@ -10,7 +10,7 @@ type BrowserFrameProps = {
 
 export const BrowserFrame: React.FC<BrowserFrameProps> = ({
   children,
-  url = "app.fieldlens.ai",
+  url = "fieldlensweb-production.up.railway.app",
   width = 1200,
   height = 720,
 }) => {

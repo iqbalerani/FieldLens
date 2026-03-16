@@ -175,7 +175,7 @@ export const ClosingScene: React.FC = () => {
                 letterSpacing: "0.05em",
               }}
             >
-              AWS Nova AI Hackathon 2025
+              AWS Nova AI Hackathon 2026
             </div>
             <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
               Built with Amazon Bedrock · Nova 2 Lite · Nova 2 Sonic · Nova Embeddings

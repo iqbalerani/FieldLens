@@ -25,11 +25,11 @@ export const SCENE_DURATIONS = {
   architecture: 1200,
   analytics: 750,
   webDemo: 1200,
-  walkthrough: 1350,
+  walkthrough: 2700,
   closing: 450,
 };
 
 export const TOTAL_FRAMES = Object.values(SCENE_DURATIONS).reduce(
   (a, b) => a + b,
   0
-); // 7350
+); // 8700

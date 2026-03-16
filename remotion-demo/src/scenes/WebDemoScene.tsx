@@ -141,7 +141,7 @@ export const WebDemoScene: React.FC = () => {
           }}
         >
           <BrowserFrame
-            url="app.fieldlens.ai"
+            url="fieldlensweb-production.up.railway.app"
             width={1600}
             height={800}
           >

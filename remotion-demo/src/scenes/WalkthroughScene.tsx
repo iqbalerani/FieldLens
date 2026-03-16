@@ -20,8 +20,8 @@ export const WalkthroughScene: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // Fade out last 30 frames (1350 total)
-  const fadeOut = interpolate(frame, [1320, 1350], [1, 0], {
+  // Fade out last 30 frames (2700 total)
+  const fadeOut = interpolate(frame, [2670, 2700], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -34,7 +34,7 @@ export const WalkthroughScene: React.FC = () => {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
-    const vOut = interpolate(f, [1320, 1350], [1, 0], {
+    const vOut = interpolate(f, [2670, 2700], [1, 0], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
@@ -61,12 +61,6 @@ export const WalkthroughScene: React.FC = () => {
             objectFit: "contain",
           }}
           muted
-        />
-        {/* Audio registered explicitly with Remotion's render pipeline */}
-        <Audio
-          src={walkthroughMediaSrc}
-          trimBefore={walkthroughAudioConfig.trimBeforeInFrames}
-          volume={(f) => volumeCallback(f) * 0.25}
         />
         {/* Narration voiceover overlay */}
         <Audio

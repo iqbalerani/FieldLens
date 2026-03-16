@@ -50,7 +50,7 @@
     {
       "id": "mobile-demo",
       "file": "fieldlens-demo-mobile-demo.mp3",
-      "text": "The inspector opens the app and enters site details — location, client, and project ID. They capture photo evidence on-site. Nova two Lite automatically analyzes each image, tagging defects and materials in real time. Nova two Sonic transcribes their voice walkthrough — turning spoken observations into structured field notes instantly. Additional notes and annotations complete the inspection record. The inspector reviews the AI-assembled report before submitting. With one tap, the data is sent to Amazon Bedrock — Nova two Lite generates the full inspection report. The result: a complete, structured report with findings, photos, and recommendations — in seconds.",
+      "text": "The inspector opens the app and enters site details — location, client, and project ID. On-site, they capture photo evidence directly through the app. Nova two Lite automatically analyzes each image in real time — identifying defects, tagging materials, and flagging safety concerns before the inspector moves to the next area. Next, the inspector records a voice walkthrough. Nova two Sonic transcribes their spoken observations instantly, turning field notes into structured text without any typing. Additional annotations and damage descriptions complete the record. The inspector reviews the AI-assembled draft — every finding organized, every photo linked. With a single tap, the data goes to Amazon Bedrock. Nova two Lite synthesizes the full inspection report: findings categorized, recommendations generated, and compliance status assessed. The result is a complete, professional report — delivered in seconds, not hours.",
       "size": 690512,
       "duration": 55,
       "actualDuration": null,
@@ -63,7 +63,7 @@
     {
       "id": "architecture",
       "file": "fieldlens-demo-architecture.mp3",
-      "text": "Here's how FieldLens is built. The mobile app routes through a backend AI pipeline powered by Amazon Bedrock. Nova two Lite handles multimodal reasoning. Nova two Sonic transcribes voice. Nova Embeddings power semantic search. The web dashboard delivers real-time visibility — all on AWS: S3, RDS, Cognito, Lambda, and CloudFront.",
+      "text": "Here is how FieldLens is built. On the mobile side, React Native captures photos and voice input from the field. Every request routes through a serverless backend on AWS Lambda, which orchestrates a multi-model AI pipeline powered entirely by Amazon Bedrock. Nova two Lite handles multimodal image reasoning and report generation. Nova two Sonic converts voice walkthroughs into structured transcriptions. Nova Embeddings enable semantic search across all inspection history. Inspection data is persisted in Amazon RDS, assets stored in S3, authentication handled by Cognito, and the web dashboard served via CloudFront — a fully managed, scalable cloud-native architecture, built for real-world field operations.",
       "size": 406718,
       "duration": 40,
       "actualDuration": null,
@@ -76,7 +76,7 @@
     {
       "id": "analytics",
       "file": "fieldlens-demo-analytics.mp3",
-      "text": "This isn't a prototype — it's real. We ran forty-seven Nova model invocations across three model types, all through Amazon Bedrock. Every AI-generated report you'll see was produced by live Nova API calls.",
+      "text": "This is not a prototype. Every figure on screen comes from real Amazon Bedrock API calls made during development and live testing. We ran forty-seven Nova model invocations across three model types — Nova two Lite, Nova two Sonic, and Nova Embeddings — all through a single unified Bedrock endpoint. One hundred percent of the AI-generated reports you have seen were produced by live Nova API calls. Zero mocking.",
       "size": 231593,
       "duration": 25,
       "actualDuration": null,
@@ -89,7 +89,7 @@
     {
       "id": "web-demo",
       "file": "fieldlens-demo-web-demo.mp3",
-      "text": "The web dashboard shows a real-time inspection feed. New submissions arrive live via WebSocket with instant status updates. The inspections list is fully searchable — filter by site, status, or date range. Nova-powered analytics surfaces defect trends, inspector performance, and compliance tracking — turning field data into actionable insights.",
+      "text": "The web dashboard is the command center for field managers and compliance teams. The overview screen shows a live inspection feed — new submissions arrive in real time via WebSocket, with status indicators updating instantly as AI processing completes. The inspections list supports full-text search and filtering by site, inspector, status, or date range, making it easy to surface exactly the records you need. The analytics tab is powered by Nova — surfacing defect trend charts, inspector performance rankings, and compliance scoring across every project. Raw field data transformed into executive-ready insights, automatically.",
       "size": 360742,
       "duration": 40,
       "actualDuration": null,
@@ -102,9 +102,9 @@
     {
       "id": "walkthrough",
       "file": "fieldlens-demo-walkthrough.mp3",
-      "text": "Let's see the full workflow in action — from opening the mobile app on site, through AI-powered report generation, to reviewing the final output on the web dashboard.",
+      "text": "Let us see the full FieldLens workflow from start to finish. The inspector launches the mobile app and creates a new inspection, logging the site address, client name, and project identifier. Moving through the site, they photograph each area of concern — cracked concrete, water intrusion, exposed wiring. Nova two Lite processes every photo on the spot, tagging defect types and severity levels in real time. The inspector then records a voice walkthrough, describing what they see in plain language. Nova two Sonic transcribes the audio instantly, and the transcript is automatically merged with the photo annotations into a unified field record. Back at the summary screen, the inspector reviews the AI-assembled findings — every issue documented, every photo attached — then submits with one tap. Amazon Bedrock receives the complete submission and Nova two Lite generates the final inspection report: categorized findings, photographic evidence, remediation recommendations, and a compliance assessment — all formatted and ready to share. The finished report appears on the web dashboard seconds later, visible to the entire project team in real time. From first photo to final report — that is FieldLens.",
       "size": 160958,
-      "duration": 45,
+      "duration": 90,
       "actualDuration": null,
       "wordsPerSecond": null,
       "leadingSilence": 0,
@@ -115,7 +115,7 @@
     {
       "id": "closing",
       "file": "fieldlens-demo-closing.mp3",
-      "text": "FieldLens. Powered by Amazon Nova. Built for the AWS Nova AI Hackathon 2025 — transforming field inspections with Nova two Lite, Nova two Sonic, and Nova Embeddings on Amazon Bedrock.",
+      "text": "FieldLens. Powered by Amazon Nova. Built for the AWS Nova AI Hackathon 2026 — transforming field inspections with Nova two Lite, Nova two Sonic, and Nova Embeddings on Amazon Bedrock.",
       "size": 221562,
       "duration": 15,
       "actualDuration": null,

@@ -92,7 +92,7 @@ export const TitleScene: React.FC = () => {
               fontFamily: "monospace",
             }}
           >
-            AWS Nova AI Hackathon 2025
+            AWS Nova AI Hackathon 2026
           </span>
         </div>
 

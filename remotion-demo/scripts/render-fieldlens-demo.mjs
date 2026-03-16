@@ -22,4 +22,4 @@ const run = (command, args) => {
 };
 
 // Walkthrough audio validation skipped — scene uses narration voiceover overlay instead of video audio
-run("npx", ["remotion", "render", "FieldLensDemo", "out/fieldlens-demo.mp4", "--concurrency=4"]);
+run("npx", ["remotion", "render", "FieldLensDemo", "out/fieldlens-demo-v3.mp4", "--concurrency=4"]);
